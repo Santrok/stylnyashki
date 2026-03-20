@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+{% block title %}Мой аккаунт — Стильняшки{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto px-4 py-8">
+  <h1 class="text-2xl font-bold mb-6">Мой аккаунт</h1>
+
+  <div class="grid md:grid-cols-3 gap-6">
+    <!-- Profile Card -->
+    <div class="bg-white rounded-xl shadow-sm p-6 text-center">
+      <div class="w-20 h-20 rounded-full bg-gradient-to-br from-pink-400 to-purple-400 flex items-center justify-center text-white text-3xl font-bold mx-auto mb-4">
+        {{ user.username|slice:":1"|upper }}
+      </div>
+      <h2 class="font-semibold text-lg">{{ user.username }}</h2>
+      {% if user.email %}
+        <p class="text-sm text-gray-500 mt-1">{{ user.email }}</p>
+      {% endif %}
+      <p class="text-xs text-gray-400 mt-2">На сайте с {{ user.date_joined|date:"d.m.Y" }}</p>
+    </div>
+
+    <!-- Account Info -->
+    <div class="md:col-span-2 space-y-4">
+      <div class="bg-white rounded-xl shadow-sm p-6">
+        <h3 class="font-semibold mb-4">Личные данные</h3>
+        <dl class="space-y-3 text-sm">
+          <div class="flex justify-between">
+            <dt class="text-gray-500">Имя пользователя:</dt>
+            <dd class="font-medium">{{ user.username }}</dd>
+          </div>
+          <div class="flex justify-between">
+            <dt class="text-gray-500">Email:</dt>
+            <dd class="font-medium">{{ user.email|default:"—" }}</dd>
+          </div>
+          <div class="flex justify-between">
+            <dt class="text-gray-500">Имя:</dt>
+            <dd class="font-medium">{{ user.first_name|default:"—" }}</dd>
+          </div>
+          <div class="flex justify-between">
+            <dt class="text-gray-500">Фамилия:</dt>
+            <dd class="font-medium">{{ user.last_name|default:"—" }}</dd>
+          </div>
+        </dl>
+      </div>
+
+      <div class="bg-white rounded-xl shadow-sm p-6">
+        <h3 class="font-semibold mb-4">Быстрые ссылки</h3>
+        <div class="space-y-2 text-sm">
+          <a href="{% url 'catalog' %}" class="flex items-center gap-2 text-gray-700 hover:text-pink-600">→ Каталог товаров</a>
+          <a href="{% url 'cart' %}" class="flex items-center gap-2 text-gray-700 hover:text-pink-600">→ Моя корзина</a>
+          <a href="{% url 'logout' %}" class="flex items-center gap-2 text-red-500 hover:text-red-700">→ Выйти</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

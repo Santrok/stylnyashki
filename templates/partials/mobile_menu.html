@@ -1,0 +1,31 @@
+<div id="mobile-menu" class="hidden fixed inset-0 z-50 bg-white flex-col">
+  <div class="flex justify-end p-4">
+    <button id="mobile-menu-close" class="p-2 hover:bg-gray-100 rounded">
+      <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+      </svg>
+    </button>
+  </div>
+  <nav class="flex flex-col gap-4 px-6 text-lg font-medium">
+    <a href="{% url 'home' %}" class="hover:text-pink-600">Главная</a>
+    <a href="{% url 'catalog' %}" class="hover:text-pink-600">Каталог</a>
+    <a href="{% url 'cart' %}" class="hover:text-pink-600">Корзина</a>
+    {% if user.is_authenticated %}
+      <a href="{% url 'account' %}" class="hover:text-pink-600">Аккаунт</a>
+      <a href="{% url 'logout' %}" class="hover:text-pink-600">Выход</a>
+    {% else %}
+      <a href="{% url 'login' %}" class="hover:text-pink-600">Войти</a>
+      <a href="{% url 'register' %}" class="hover:text-pink-600">Регистрация</a>
+    {% endif %}
+  </nav>
+</div>
+<script>
+  document.getElementById('mobile-menu-btn').addEventListener('click', function() {
+    document.getElementById('mobile-menu').classList.remove('hidden');
+    document.getElementById('mobile-menu').classList.add('flex');
+  });
+  document.getElementById('mobile-menu-close').addEventListener('click', function() {
+    document.getElementById('mobile-menu').classList.add('hidden');
+    document.getElementById('mobile-menu').classList.remove('flex');
+  });
+</script>
