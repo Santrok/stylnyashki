@@ -69,8 +69,10 @@ class Product(models.Model):
     @property
     def discounted_price(self):
         """Return price after applying the discount percentage."""
+        from decimal import Decimal
         if self.discount:
-            return round(self.price * (1 - self.discount / 100), 2)
+            factor = Decimal(self.discount) / Decimal(100)
+            return round(self.price * (1 - factor), 2)
         return self.price
 
 
