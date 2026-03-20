@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+{% block title %}Корзина — Стильняшки{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-4 py-8">
+  <h1 class="text-2xl font-bold mb-6">Корзина</h1>
+  {% with items=cart.items.all %}
+    {% if items %}
+      <div class="space-y-4 mb-8">
+        {% for item in items %}
+          <div class="bg-white rounded-xl shadow-sm p-4 flex gap-4 items-center">
+            {% if item.product.image %}
+              <img src="{{ item.product.image.url }}" alt="{{ item.product.name }}" class="w-20 h-20 object-cover rounded-lg flex-shrink-0"/>
+            {% else %}
+              <div class="w-20 h-20 bg-gradient-to-br from-pink-100 to-purple-100 rounded-lg flex-shrink-0 flex items-center justify-center">
+                <span class="text-xs text-gray-400">Нет фото</span>
+              </div>
+            {% endif %}
+            <div class="flex-1 min-w-0">
+              <h3 class="font-semibold truncate">{{ item.product.name }}</h3>
+              <p class="text-sm text-gray-500">{{ item.product.brand }}</p>
+              {% if item.size %}
+                <p class="text-sm text-gray-500">Размер: {{ item.size }}</p>
+              {% endif %}
+              <p class="text-sm text-gray-500">Кол-во: {{ item.quantity }}</p>
+            </div>
+            <div class="text-right flex-shrink-0">
+              <p class="font-bold text-pink-600">{{ item.subtotal }} ₽</p>
+              <form action="{% url 'cart_remove' item.id %}" method="post" class="mt-2">
+                {% csrf_token %}
+                <button type="submit" class="text-sm text-red-500 hover:text-red-700 hover:underline">Удалить</button>
+              </form>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+
+      <div class="bg-white rounded-xl shadow-sm p-6">
+        <div class="flex justify-between items-center text-lg font-bold mb-4">
+          <span>Итого:</span>
+          <span class="text-pink-600">{{ cart.total }} ₽</span>
+        </div>
+        <a href="{% url 'checkout' %}" class="block w-full bg-pink-600 text-white text-center py-3 rounded-xl font-semibold hover:bg-pink-700 transition-colors">Оформить заказ</a>
+      </div>
+    {% else %}
+      <div class="text-center py-16">
+        <p class="text-4xl mb-4">🛒</p>
+        <p class="text-xl text-gray-500 mb-6">Ваша корзина пуста</p>
+        <a href="{% url 'catalog' %}" class="inline-block bg-pink-600 text-white px-8 py-3 rounded-full font-semibold hover:bg-pink-700 transition-colors">Перейти в каталог</a>
+      </div>
+    {% endif %}
+  {% endwith %}
+</div>
+{% endblock %}

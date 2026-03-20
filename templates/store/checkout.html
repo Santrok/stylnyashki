@@ -1,0 +1,60 @@
+{% extends 'base.html' %}
+{% block title %}Оформление заказа — Стильняшки{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto px-4 py-8">
+  <h1 class="text-2xl font-bold mb-6">Оформление заказа</h1>
+
+  <div class="grid md:grid-cols-5 gap-8">
+    <!-- Checkout Form -->
+    <div class="md:col-span-3">
+      <div class="bg-white rounded-xl shadow-sm p-6">
+        <h2 class="font-semibold text-lg mb-4">Данные доставки</h2>
+        <form method="post" class="space-y-4">
+          {% csrf_token %}
+          <div>
+            <label class="block text-sm font-medium mb-1">Имя и фамилия</label>
+            <input type="text" name="full_name" value="{{ user.get_full_name }}"
+                   class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-pink-400" required/>
+          </div>
+          <div>
+            <label class="block text-sm font-medium mb-1">Email</label>
+            <input type="email" name="email" value="{{ user.email }}"
+                   class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-pink-400" required/>
+          </div>
+          <div>
+            <label class="block text-sm font-medium mb-1">Адрес доставки</label>
+            <textarea name="address" rows="3"
+                      class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-pink-400" required></textarea>
+          </div>
+          <div>
+            <label class="block text-sm font-medium mb-1">Телефон</label>
+            <input type="tel" name="phone"
+                   class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-pink-400"/>
+          </div>
+          <button type="submit" class="w-full bg-pink-600 text-white py-3 rounded-xl font-semibold hover:bg-pink-700 transition-colors">Подтвердить заказ</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Order Summary -->
+    <div class="md:col-span-2">
+      <div class="bg-white rounded-xl shadow-sm p-6">
+        <h2 class="font-semibold text-lg mb-4">Ваш заказ</h2>
+        {% with items=cart.items.all %}
+          {% for item in items %}
+            <div class="flex justify-between text-sm py-2 border-b">
+              <span class="truncate pr-2">{{ item.product.name }} × {{ item.quantity }}</span>
+              <span class="flex-shrink-0 font-medium">{{ item.subtotal }} ₽</span>
+            </div>
+          {% endfor %}
+          <div class="flex justify-between font-bold text-lg mt-4">
+            <span>Итого:</span>
+            <span class="text-pink-600">{{ cart.total }} ₽</span>
+          </div>
+        {% endwith %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
