@@ -1,54 +1,242 @@
-{% extends 'base.html' %}
-{% block title %}Корзина — Стильняшки{% endblock %}
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Стильняшки - Корзина{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'css/cart.css' %}">
+{% endblock %}
 
 {% block content %}
-<div class="max-w-4xl mx-auto px-4 py-8">
-  <h1 class="text-2xl font-bold mb-6">Корзина</h1>
-  {% with items=cart.items.all %}
-    {% if items %}
-      <div class="space-y-4 mb-8">
-        {% for item in items %}
-          <div class="bg-white rounded-xl shadow-sm p-4 flex gap-4 items-center">
-            {% if item.product.image %}
-              <img src="{{ item.product.image.url }}" alt="{{ item.product.name }}" class="w-20 h-20 object-cover rounded-lg flex-shrink-0"/>
-            {% else %}
-              <div class="w-20 h-20 bg-gradient-to-br from-pink-100 to-purple-100 rounded-lg flex-shrink-0 flex items-center justify-center">
-                <span class="text-xs text-gray-400">Нет фото</span>
-              </div>
-            {% endif %}
-            <div class="flex-1 min-w-0">
-              <h3 class="font-semibold truncate">{{ item.product.name }}</h3>
-              <p class="text-sm text-gray-500">{{ item.product.brand }}</p>
-              {% if item.size %}
-                <p class="text-sm text-gray-500">Размер: {{ item.size }}</p>
-              {% endif %}
-              <p class="text-sm text-gray-500">Кол-во: {{ item.quantity }}</p>
-            </div>
-            <div class="text-right flex-shrink-0">
-              <p class="font-bold text-pink-600">{{ item.subtotal }} ₽</p>
-              <form action="{% url 'cart_remove' item.id %}" method="post" class="mt-2">
-                {% csrf_token %}
-                <button type="submit" class="text-sm text-red-500 hover:text-red-700 hover:underline">Удалить</button>
-              </form>
-            </div>
-          </div>
-        {% endfor %}
+<div class="container">
+  <main class="cart-page">
+    <div class="layout-container cart-page__container">
+      <!-- Breadcrumbs -->
+      <div class="breadcrumbs">
+        <a class="breadcrumbs__link" href="{% url 'home' %}">Главная</a>
+        <i class="breadcrumbs__sep fas fa-chevron-right"></i>
+        <span class="breadcrumbs__current">Корзина</span>
       </div>
 
-      <div class="bg-white rounded-xl shadow-sm p-6">
-        <div class="flex justify-between items-center text-lg font-bold mb-4">
-          <span>Итого:</span>
-          <span class="text-pink-600">{{ cart.total }} ₽</span>
+      <!-- Checkout Steps -->
+      <div class="steps-wrap" aria-label="Шаги оформления">
+        <div class="steps">
+          <div class="step-connector"></div>
+
+          <div class="step-item step-active">
+            <div class="step-circle">1</div>
+            <p class="step-label step-label--active">Корзина</p>
+          </div>
+
+          <div class="step-item">
+            <div class="step-circle step-circle--inactive">2</div>
+            <p class="step-label step-label--inactive">Оформление</p>
+          </div>
+
+          <div class="step-item">
+            <div class="step-circle step-circle--inactive">3</div>
+            <p class="step-label step-label--inactive">Оплата</p>
+          </div>
         </div>
-        <a href="{% url 'checkout' %}" class="block w-full bg-pink-600 text-white text-center py-3 rounded-xl font-semibold hover:bg-pink-700 transition-colors">Оформить заказ</a>
       </div>
-    {% else %}
-      <div class="text-center py-16">
-        <p class="text-4xl mb-4">🛒</p>
-        <p class="text-xl text-gray-500 mb-6">Ваша корзина пуста</p>
-        <a href="{% url 'catalog' %}" class="inline-block bg-pink-600 text-white px-8 py-3 rounded-full font-semibold hover:bg-pink-700 transition-colors">Перейти в каталог</a>
+
+      <!-- Cart Layout -->
+      <div class="cart-layout">
+        <!-- Left Column: Items List -->
+        <section class="cart-list">
+          <div class="cart-list__head">
+            <div class="cart-head-grid">
+              <div class="cart-head-grid__col cart-head-grid__col--product">Товар</div>
+              <div class="cart-head-grid__col cart-head-grid__col--price">Цена</div>
+              <div class="cart-head-grid__col cart-head-grid__col--sum">Сумма</div>
+            </div>
+          </div>
+
+          <div class="cart-list__body custom-scroll">
+            {% if items %}
+              <div class="cart-items">
+                {% for item in items %}
+                  <article class="cart-item {% if item.availability != 'available' %}cart-item--muted{% endif %}"
+                           data-cart-item
+                           data-item-id="{{ item.id }}"
+                           data-availability="{{ item.availability }}">
+                    <div class="cart-item__grid cart-item__grid--noqty">
+                      <!-- product -->
+                      {% if item.availability == "available" %}
+                        <button class="cart-item__product cart-item__open"
+                                type="button"
+                                data-action="open-product-modal"
+                                data-modal-context="cart"
+                                data-product-id="{{ item.product.id }}"
+                                data-name="{{ item.product.name|escape }}"
+                                data-brand="{{ item.product.brand|default:''|escape }}"
+                                data-image="{% if item.product.image %}{{ item.product.image.url }}{% endif %}"
+                                data-price="{{ item.product.price|floatformat:0 }}"
+                                data-discount="{% if item.product.discount %}{{ item.product.discount }}{% else %}0{% endif %}"
+                                data-price-discounted="{{ item.product.discounted_price|floatformat:0 }}">
+                      {% else %}
+                        <div class="cart-item__product cart-item__open cart-item__open--disabled"
+                             aria-disabled="true">
+                      {% endif %}
+                          <div class="cart-item__img">
+                            {% if item.product.discount %}
+                              <span class="cart-item__badge bg-brand-red">-{{ item.product.discount }}%</span>
+                            {% endif %}
+
+                            {% if item.availability != "available" %}
+                              <span class="cart-item__status-badge">
+                                {% if item.availability == "reserved" %}В резерве{% else %}Продано{% endif %}
+                              </span>
+                            {% endif %}
+
+                            {% if item.product.image %}
+                              <img src="{{ item.product.image.url }}" alt="{{ item.product.name }}">
+                            {% else %}
+                              <img src="{% static 'img/placeholder.png' %}" alt="">
+                            {% endif %}
+                          </div>
+
+                          <div class="cart-item__meta">
+                            {% if item.product.brand %}
+                              <p class="cart-item__brand">{{ item.product.brand }}</p>
+                            {% endif %}
+                            <p class="cart-item__name">{{ item.product.name }}</p>
+
+                            <div class="cart-item__attrs">
+                              {% if item.size %}
+                                <span class="pill">Р-р: {{ item.size }}</span>
+                              {% endif %}
+
+                              {% if item.availability != "available" %}
+                                <span class="pill pill--muted">Не входит в сумму</span>
+                              {% endif %}
+                            </div>
+                          </div>
+                      {% if item.availability == "available" %}
+                        </button>
+                      {% else %}
+                        </div>
+                      {% endif %}
+
+                      <!-- price -->
+                      <div class="cart-item__price">
+                        <p class="price-now">{{ item.product.discounted_price|floatformat:0 }} <span class="by-currency">ƃ</span></p>
+                        {% if item.product.discount %}
+                          <p class="price-old">{{ item.product.price|floatformat:0 }} <span class="by-currency-old">ƃ</span></p>
+                        {% endif %}
+                      </div>
+
+                      <!-- sum + remove -->
+                      <div class="cart-item__sum">
+                        {% if item.availability == "available" %}
+                          <p class="sum-val" data-subtotal>{{ item.subtotal|floatformat:0 }} <span class="by-currency">ƃ</span></p>
+                        {% else %}
+                          <p class="sum-val sum-val--muted">—</p>
+                        {% endif %}
+
+                        <div class="remove">
+                          <button class="remove-btn"
+                                  type="button"
+                                  data-action="cart-remove-ask">
+                            <i class="far fa-trash-alt"></i> Удалить
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </article>
+                {% endfor %}
+              </div>
+            {% else %}
+              <div class="empty">
+                <p class="empty__title">Корзина пустая</p>
+                <p class="empty__text">Добавьте товары из каталога, и они появятся здесь.</p>
+                <a class="btn btn--yellow" href="{% url 'catalog' %}">Перейти в каталог</a>
+              </div>
+            {% endif %}
+          </div>
+
+          <div class="cart-list__foot">
+            <i class="fas fa-truck text-brand-yellow"></i>
+            <p>Доставка рассчитается далее</p>
+          </div>
+        </section>
+
+        <!-- Right Column: Summary -->
+        <aside class="cart-side">
+          <section class="summary">
+            <h2 class="summary__title brand-font">Итого</h2>
+
+            <div class="summary__rows">
+              <div class="summary__row">
+                <span class="summary__label" data-cart-total-qty>
+                  Товары ({{ total_qty|default:"0" }})
+                </span>
+                <span class="summary__value" data-cart-total-sum>
+                  {{ total_sum|default:"0"|floatformat:0 }} <span class="by-currency">ƃ</span>
+                </span>
+              </div>
+
+              <div class="summary__row summary__row--muted">
+                <span class="summary__label">Доставка</span>
+                <span class="summary__value">Рассчитается далее</span>
+              </div>
+            </div>
+
+            <div class="summary__total">
+              <span class="summary__pay-label">К оплате</span>
+              <span class="summary__pay by-currency" data-cart-pay>
+                {{ total_sum|default:"0"|floatformat:0 }} <span>ƃ</span>
+              </span>
+            </div>
+
+            {% if total_qty|default:0 > 0 %}
+              <a class="btn btn--yellow btn--wide" href="{% url 'checkout' %}">
+                <span>Перейти к оформлению</span>
+                <i class="fas fa-arrow-right"></i>
+              </a>
+            {% else %}
+              <button class="btn btn--yellow btn--wide btn--disabled" type="button" disabled>
+                <span>Перейти к оформлению</span>
+                <i class="fas fa-arrow-right"></i>
+              </button>
+
+              {% if items %}
+                <p class="summary__hint">
+                  В корзине нет доступных товаров для оформления. Недоступные товары отмечены серым.
+                </p>
+              {% endif %}
+            {% endif %}
+
+            <a class="btn btn--ghost btn--wide" href="{% url 'catalog' %}">
+              Продолжить покупки
+            </a>
+          </section>
+
+          <section class="promo">
+            <p class="promo__title">Промокод</p>
+            <div class="promo__row">
+              <input class="promo__input" placeholder="Введите код" type="text">
+              <button class="promo__btn" type="button" aria-label="Применить">
+                <i class="fas fa-check"></i>
+              </button>
+            </div>
+          </section>
+        </aside>
       </div>
-    {% endif %}
-  {% endwith %}
+    </div>
+  </main>
 </div>
+
+<!-- Popover confirm for removing item -->
+<div id="cartRemovePopover" class="popover" hidden>
+  <div class="popover__title">Удалить товар?</div>
+  <div class="popover__actions">
+    <button class="popover__btn popover__btn--ghost" type="button" data-popover-cancel>Отмена</button>
+    <button class="popover__btn popover__btn--danger" type="button" data-popover-confirm>Удалить</button>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/cart.js' %}" defer></script>
 {% endblock %}

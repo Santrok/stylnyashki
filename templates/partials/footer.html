@@ -1,25 +1,14 @@
-<footer class="bg-white border-t mt-auto">
-  <div class="max-w-7xl mx-auto px-4 py-8">
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-      <div>
-        <h3 class="font-bold text-pink-600 text-lg mb-3">Стильняшки</h3>
-        <p class="text-sm text-gray-600">Модная одежда для девочек и мальчиков по лучшим ценам.</p>
-      </div>
-      <div>
-        <h3 class="font-semibold mb-3">Навигация</h3>
-        <ul class="space-y-2 text-sm text-gray-600">
-          <li><a href="{% url 'home' %}" class="hover:text-pink-600">Главная</a></li>
-          <li><a href="{% url 'catalog' %}" class="hover:text-pink-600">Каталог</a></li>
-          <li><a href="{% url 'cart' %}" class="hover:text-pink-600">Корзина</a></li>
-        </ul>
-      </div>
-      <div>
-        <h3 class="font-semibold mb-3">Контакты</h3>
-        <p class="text-sm text-gray-600">info@stylnyashki.ru</p>
-      </div>
+<footer class="footer">
+  <div class="container footer__inner">
+    <div class="footer__links">
+      <span>© {% now "Y" %} Стильняшки</span>
+      <a href="#">Политика конфиденциальности</a>
+      <a href="#">Публичная оферта</a>
     </div>
-    <div class="mt-6 pt-6 border-t text-center text-sm text-gray-500">
-      &copy; {% now "Y" %} Стильняшки. Все права защищены.
+    <div class="footer__social">
+      <a href="#" aria-label="VK"><i class="fab fa-vk"></i></a>
+      <a href="#" aria-label="Telegram"><i class="fab fa-telegram"></i></a>
+      <a href="#" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
     </div>
   </div>
 </footer>

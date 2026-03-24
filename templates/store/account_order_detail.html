@@ -1,0 +1,101 @@
+{% extends "store/account_base.html" %}
+{% load static %}
+
+{% block title %}Стильняшки — Заказ {{ order.order_number }}{% endblock %}
+
+{% block extra_head_double %}
+<link rel="stylesheet" href="{% static 'css/account_order_detail.css' %}">
+{% endblock %}
+
+{% block nav_orders_active %}is-active{% endblock %}
+{% block account_title %}Заказ №{{ order.order_number }}{% endblock %}
+
+{% block account_content %}
+<div class="card">
+  <div class="card__head" style="align-items:flex-start;">
+    <div>
+      <div class="card__title brand-font">Заказ №{{ order.order_number }}</div>
+      <div style="color:var(--muted); font-weight:700; margin-top:6px;">
+        {{ order.created_at|date:"d.m.Y H:i" }}
+      </div>
+    </div>
+
+    <div style="margin-left:auto; text-align:right;">
+      <div style="color:var(--muted); margin-top:8px; font-weight:800;">
+        Статус: <strong>{{ order.get_status_display }}</strong>
+      </div>
+    </div>
+  </div>
+
+  {# Если заказ отменён и есть проблемные товары — показываем их отдельно #}
+  {% if order.status == order.Status.CANCELED and problem_products %}
+    <div class="card order-problem" style="margin:12px 0;">
+      <h3 style="margin:0 0 8px;">К сожалению, оформление не удалось</h3>
+      <p style="margin:0 0 12px; color:var(--muted);">
+        Один или несколько товаров в этом заказе уже были куплены другим покупателем:
+      </p>
+
+      <div class="problem-list">
+        {% for p in problem_products %}
+          <div class="problem-item">
+            <div class="problem-item__img">
+              {% if p.image %}
+                <img src="{{ p.image.url }}" alt="{{ p.name }}">
+              {% endif %}
+            </div>
+
+            <div class="problem-item__meta">
+              <div class="problem-item__name">{{ p.name }}</div>
+              <div class="problem-item__status">
+                {% if p.status == p.Status.SOLD %}Продано{% else %}В резерве{% endif %}
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+
+      <div style="margin-top:12px; display:flex; gap:12px;">
+        <a class="btn btn--yellow" href="{% url 'cart' %}">Перейти в корзину</a>
+        <a class="btn btn--ghost" href="{% url 'catalog' %}">В каталог</a>
+      </div>
+    </div>
+  {% endif %}
+
+  <section style="margin-top:12px;">
+    <h3 style="margin:0 0 12px;">Позиции</h3>
+
+    <div class="order-items">
+      {% for item in order.items.all %}
+        <div class="order-item-row">
+          <div class="order-item-left">
+            <div class="order-item-thumb">
+              {% if item.product and item.product.image %}
+                <img src="{{ item.product.image.url }}" alt="{{ item.product_name }}">
+              {% endif %}
+            </div>
+
+            <div class="order-item-meta">
+              <div class="order-item-name">{{ item.product_name }}</div>
+              <div class="order-item-attrs">{% if item.size %}Р-р: {{ item.size }}{% endif %}</div>
+            </div>
+          </div>
+
+          <div class="order-item-right">
+            <div class="order-item-price">{{ item.price|floatformat:0 }} <span class="by-currency">ƃ</span></div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  </section>
+
+  <div class="order-totals">
+    <div class="order-delivery">Доставка: {{ order.delivery_price|floatformat:0 }} <span class="by-currency">ƃ</span></div>
+    {# Если понадобится — можно включить итоговую сумму: order.total #}
+  </div>
+
+  <div class="card__actions" style="margin-top:14px; justify-content:flex-start;">
+    <a class="btn btn--ghost" href="{% url 'account_orders' %}">← Вернуться к заказам</a>
+    <a class="btn btn--yellow" href="{% url 'catalog' %}">В каталог</a>
+  </div>
+</div>
+{% endblock %}

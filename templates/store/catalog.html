@@ -1,104 +1,363 @@
-{% extends 'base.html' %}
-{% block title %}Каталог — Стильняшки{% endblock %}
+{% extends "base.html" %}
+{% load static %}
+{% load querystring %}
+
+{% block title %}Стильняшки — Каталог{% endblock %}
+
+{% block extra_head %}
+  <link rel="stylesheet" href="{% static 'css/catalog.css' %}">
+{% endblock %}
 
 {% block content %}
-<div class="max-w-7xl mx-auto px-4 py-8">
-  <h1 class="text-2xl font-bold mb-6">Каталог</h1>
-  <div class="flex flex-col md:flex-row gap-8">
 
-    <!-- Filters Sidebar -->
-    <aside class="w-full md:w-64 flex-shrink-0">
-      <form method="get" class="bg-white rounded-xl shadow-sm p-5 space-y-5">
-        <h2 class="font-semibold text-lg">Фильтры</h2>
+<!-- Mobile Filters Overlay + Drawer -->
+<div id="mobileFilters" class="filters-overlay" aria-hidden="true">
+  <div class="filters-drawer" role="dialog" aria-modal="true" aria-label="Фильтры">
+    <div class="filters-drawer__header">
+      <p class="filters-drawer__title">Фильтры</p>
+      <button id="filtersCloseBtn" class="icon-btn" aria-label="Закрыть фильтры" type="button">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
 
-        <div>
-          <label class="block text-sm font-medium mb-1">Поиск</label>
-          <input type="text" name="q" value="{{ query_params.q }}" placeholder="Название или бренд"
-                 class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-400"/>
-        </div>
+    <div id="filtersDrawerBody" class="filters-drawer__body custom-scroll"></div>
 
-        {% if categories %}
-        <div>
-          <label class="block text-sm font-medium mb-1">Категория</label>
-          <select name="category" class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-400">
-            <option value="">Все</option>
-            {% for cat in categories %}
-              <option value="{{ cat }}" {% if query_params.category == cat %}selected{% endif %}>{{ cat }}</option>
-            {% endfor %}
-          </select>
-        </div>
-        {% endif %}
+    <div class="filters-drawer__footer">
 
-        {% if seasons %}
-        <div>
-          <label class="block text-sm font-medium mb-1">Сезон</label>
-          <select name="season" class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-400">
-            <option value="">Все</option>
-            {% for s in seasons %}
-              <option value="{{ s }}" {% if query_params.season == s %}selected{% endif %}>{{ s }}</option>
-            {% endfor %}
-          </select>
-        </div>
-        {% endif %}
-
-        <div class="grid grid-cols-2 gap-2">
-          <div>
-            <label class="block text-sm font-medium mb-1">Цена от</label>
-            <input type="number" name="min_price" value="{{ query_params.min_price }}" placeholder="0"
-                   class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-400"/>
-          </div>
-          <div>
-            <label class="block text-sm font-medium mb-1">до</label>
-            <input type="number" name="max_price" value="{{ query_params.max_price }}" placeholder="∞"
-                   class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-400"/>
-          </div>
-        </div>
-
-        <button type="submit" class="w-full bg-pink-600 text-white py-2 rounded-lg font-semibold hover:bg-pink-700 transition-colors">Применить</button>
-        <a href="{% url 'catalog' %}" class="block text-center text-sm text-gray-500 hover:text-pink-600">Сбросить фильтры</a>
-      </form>
-    </aside>
-
-    <!-- Product Grid -->
-    <div class="flex-1">
-      {% if products %}
-        <p class="text-sm text-gray-500 mb-4">Найдено товаров: {{ products|length }}</p>
-        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
-          {% for product in products %}
-            <div class="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow overflow-hidden">
-              {% if product.image %}
-                <img src="{{ product.image.url }}" alt="{{ product.name }}" class="w-full h-48 object-cover"/>
-              {% else %}
-                <div class="w-full h-48 bg-gradient-to-br from-pink-100 to-purple-100 flex items-center justify-center">
-                  <span class="text-gray-400 text-sm">Нет фото</span>
-                </div>
-              {% endif %}
-              <div class="p-4">
-                <p class="text-xs text-gray-400 mb-1">{{ product.brand }}</p>
-                <h3 class="font-semibold text-sm mb-2 line-clamp-2">{{ product.name }}</h3>
-                <div class="flex items-center gap-2 flex-wrap">
-                  <span class="font-bold text-pink-600">{{ product.discounted_price }} ₽</span>
-                  {% if product.discount %}
-                    <span class="text-xs text-gray-400 line-through">{{ product.price }} ₽</span>
-                    <span class="text-xs bg-pink-100 text-pink-600 px-2 py-0.5 rounded-full">-{{ product.discount }}%</span>
-                  {% endif %}
-                </div>
-                <form action="{% url 'cart_add' product.id %}" method="post" class="mt-3">
-                  {% csrf_token %}
-                  <button type="submit" class="w-full bg-pink-600 text-white py-2 rounded-lg text-sm hover:bg-pink-700 transition-colors">В корзину</button>
-                </form>
-              </div>
-            </div>
-          {% endfor %}
-        </div>
-      {% else %}
-        <div class="text-center py-16 text-gray-500">
-          <p class="text-4xl mb-4">🔍</p>
-          <p class="text-lg">Товары не найдены. Попробуйте изменить фильтры.</p>
-          <a href="{% url 'catalog' %}" class="mt-4 inline-block text-pink-600 hover:underline">Сбросить фильтры</a>
-        </div>
-      {% endif %}
+      <button id="filtersApplyBtn" class="filters-apply-btn" type="button">Применить</button>
     </div>
   </div>
 </div>
+<div class="container">
+<div class="catalog-page">
+  <div class="catalog-layout">
+
+    <!-- Sidebar Filters -->
+    <aside id="filtersSidebar" class="filters-sidebar custom-scroll">
+      <form id="filtersForm" method="get" action="{% url 'catalog' %}">
+        {# сохраняем категорию при применении остальных фильтров #}
+        {% if current_category %}
+          <input type="hidden" name="category" value="{{ current_category.slug }}">
+        {% endif %}
+
+        <div class="filters-block">
+            {% if current_root %}
+            <div style="margin-top:10px;">
+              <a class="filters-heading brand-font" href="{% url 'catalog' %}{% qs category=None page=None %}">
+                Категории
+              </a>
+            </div>
+            {% else %}
+            <h3 class="filters-heading brand-font">Категории</h3>
+          {% endif %}
+
+          <ul class="filters-tree">
+            {% for root in root_categories %}
+              {% if current_root and root.id != current_root.id %}
+                {# скрываем остальные level_1 #}
+              {% else %}
+                <li class="filters-tree__root">
+                  <a class="filters-tree__root-link {% if current_root and root.id == current_root.id %}is-active{% endif %}"
+                     href="{% url 'catalog' %}{% qs category=root.slug page=None %}">
+                    {{ root.title }}
+                  </a>
+
+                  <ul class="filters-tree__children">
+                    {% for c in root.get_children %}
+                      <li class="filters-tree__child">
+                        <a class="filters-tree__child-link {% if current_category and current_category.id == c.id %}is-active{% endif %}"
+                           href="{% url 'catalog' %}{% qs category=c.slug page=None %}">
+                          {{ c.title }}
+                        </a>
+                      </li>
+                    {% endfor %}
+                  </ul>
+                </li>
+              {% endif %}
+            {% endfor %}
+          </ul>
+        </div>
+
+        <div class="filters-block">
+  <h3 class="filters-heading by-currency">Цена, <span>ƃ</span></h3>
+
+  <div class="price-range">
+    <span class="price-pill" id="priceMinLabel">
+      {% if query_params.min_price %}{{ query_params.min_price }}{% elif price_min is not None %}{{ price_min|floatformat:0 }}{% else %}—{% endif %}
+    </span>
+    <span class="price-dash">-</span>
+    <span class="price-pill" id="priceMaxLabel">
+      {% if query_params.max_price %}{{ query_params.max_price }}{% elif price_max is not None %}{{ price_max|floatformat:0 }}{% else %}—{% endif %}
+    </span>
+  </div>
+
+
+
+  {# Двойной range (UI) #}
+  <div class="range" id="priceRange"
+       data-min="{% if price_min is not None %}{{ price_min|floatformat:0 }}{% else %}0{% endif %}"
+       data-max="{% if price_max is not None %}{{ price_max|floatformat:0 }}{% else %}0{% endif %}">
+    <div class="range__track"></div>
+    <div class="range__fill" id="priceRangeFill"></div>
+
+    <input class="range__input" id="minPriceRange" type="range"
+           {% if price_min is not None %}min="{{ price_min|floatformat:0 }}"{% else %}min="0"{% endif %}
+           {% if price_max is not None %}max="{{ price_max|floatformat:0 }}"{% else %}max="0"{% endif %}
+           value="{% if query_params.min_price %}{{ query_params.min_price }}{% elif price_min is not None %}{{ price_min|floatformat:0 }}{% else %}0{% endif %}"
+           step="1">
+
+    <input class="range__input" id="maxPriceRange" type="range"
+           {% if price_min is not None %}min="{{ price_min|floatformat:0 }}"{% else %}min="0"{% endif %}
+           {% if price_max is not None %}max="{{ price_max|floatformat:0 }}"{% else %}max="0"{% endif %}
+           value="{% if query_params.max_price %}{{ query_params.max_price }}{% elif price_max is not None %}{{ price_max|floatformat:0 }}{% else %}0{% endif %}"
+           step="1">
+  </div>
+            {# Реальные input'ы (они будут отправляться в GET) #}
+  <div class="price-inputs">
+    <input class="price-input" id="minPriceInput" type="number" name="min_price" placeholder="от" value="{{ query_params.min_price }}">
+    <input class="price-input" id="maxPriceInput" type="number" name="max_price" placeholder="до" value="{{ query_params.max_price }}">
+  </div>
+
+  {% if price_min is not None and price_max is not None and price_min == price_max %}
+    <p class="price-note">Все товары по одной цене: {{ price_min|floatformat:0 }} ₽</p>
+  {% endif %}
+</div>
+
+        <div class="filters-block">
+          <h3 class="filters-heading">Размер (Рост)</h3>
+
+          <div class="check-grid">
+            {% for s in sizes %}
+              <label class="custom-checkbox">
+                <input type="checkbox"
+                       name="size"
+                       value="{{ s.value }}"
+                       {% if s.value in selected_sizes %}checked{% endif %}>
+                <span class="check-box"></span>
+                <span class="check-text">{{ s }}</span>
+              </label>
+            {% endfor %}
+          </div>
+        </div>
+
+        <div class="filters-actions">
+          <button class="filters-submit" type="submit">Применить</button>
+          <a class="filters-reset-link" href="{% url 'catalog' %}{% qs page=None min_price=None max_price=None size=None brand=None season=None q=None %}">
+            Сбросить фильтры
+          </a>
+        </div>
+      </form>
+
+    </aside>
+
+    <!-- Product Grid Section -->
+    <section class="catalog-main">
+      <div class="catalog-head">
+        <div class="catalog-title">
+          <div class="crumbs">
+  <a class="crumbs__link" href="{% url 'home' %}">Главная</a>
+
+  <span class="crumbs__sep"><i class="fas fa-chevron-right"></i></span>
+  <a class="crumbs__link" href="{% url 'catalog' %}{% qs category=None page=None %}">Каталог</a>
+
+  {% for c in breadcrumbs %}
+    <span class="crumbs__sep"><i class="fas fa-chevron-right"></i></span>
+    <a class="crumbs__link" href="{% url 'catalog' %}{% qs category=c.slug page=None %}">{{ c.title }}</a>
+  {% endfor %}
+</div>
+
+<h2 class="catalog-h2 brand-font">
+  {% if current_category %}{{ current_category.title }}{% else %}Каталог{% endif %}
+  <span class="catalog-count">({{ page_obj.paginator.count }})</span>
+</h2>
+
+        </div>
+
+        <div class="catalog-tools">
+          <button id="filtersOpenBtn" class="filters-open-btn" type="button">
+            <i class="fas fa-sliders-h"></i>
+            <span>Фильтры</span>
+          </button>
+
+            <div class="sort-mobile">
+<!--  <label class="sort-mobile__label" for="sortSelect">Сортировка</label>-->
+  <select id="sortSelect" class="sort-mobile__select" name="sort"
+          onchange="location.href=this.value;">
+    <option value="{% url 'catalog' %}{% qs sort='new' page=None %}" {% if sort == 'new' %}selected{% endif %}>Новинки</option>
+    <option value="{% url 'catalog' %}{% qs sort='price_asc' page=None %}" {% if sort == 'price_asc' %}selected{% endif %}>Цена ↑</option>
+    <option value="{% url 'catalog' %}{% qs sort='price_desc' page=None %}" {% if sort == 'price_desc' %}selected{% endif %}>Цена ↓</option>
+    <option value="{% url 'catalog' %}{% qs sort='discount' page=None %}" {% if sort == 'discount' %}selected{% endif %}>Скидки</option>
+  </select>
+</div>
+
+          {# сортировку подключим следующим шагом #}
+          <div class="sort-pill sort-desktop">
+  <span class="sort-pill__label">Сортировка:</span>
+
+  <a class="sort-pill__value {% if sort == 'new' %}is-active{% endif %}"
+     href="{% url 'catalog' %}{% qs sort='new' page=None %}">
+    Новинки
+  </a>
+
+  <a class="sort-pill__value {% if sort == 'price_asc' %}is-active{% endif %}"
+     href="{% url 'catalog' %}{% qs sort='price_asc' page=None %}">
+    Цена ↑
+  </a>
+
+  <a class="sort-pill__value {% if sort == 'price_desc' %}is-active{% endif %}"
+     href="{% url 'catalog' %}{% qs sort='price_desc' page=None %}">
+    Цена ↓
+  </a>
+
+  <a class="sort-pill__value {% if sort == 'discount' %}is-active{% endif %}"
+     href="{% url 'catalog' %}{% qs sort='discount' page=None %}">
+    Скидки
+  </a>
+</div>
+
+        </div>
+      </div>
+
+      <div class="catalog-grid custom-scroll">
+        {% for p in products %}
+          <div class="p-card js-product-card"
+     role="button"
+     tabindex="0"
+     data-product-id="{{ p.id }}"
+     data-name="{{ p.name|escape }}"
+     data-brand="{{ p.brand|default:''|escape }}"
+     data-image="{% if p.image %}{{ p.image.url }}{% endif %}"
+     data-price="{{ p.price|floatformat:0 }}"
+     data-discount="{% if p.discount %}{{ p.discount }}{% else %}0{% endif %}"
+     data-price-discounted="{% if p.discount %}{{ p.discounted_price|floatformat:0 }}{% else %}{{ p.price|floatformat:0 }}{% endif %}">
+            {% if p.discount %}
+              <div class="p-card__badges">
+                <span class="badge badge--red">-{{ p.discount }}%</span>
+              </div>
+            {% endif %}
+
+            <button class="p-card__fav"
+        type="button"
+        aria-label="В избранное"
+        data-no-open="1"
+        data-action="toggle-favorite"
+        data-product-id="{{ p.id }}">
+  <i class="far fa-heart"></i>
+</button>
+
+            <div class="p-card__img">
+              {% if p.image %}
+                <img alt="{{ p.name }}" src="{{ p.image.url }}">
+              {% else %}
+                <div style="color:#9ca3af;font-size:24px;"><i class="fas fa-camera"></i></div>
+              {% endif %}
+            </div>
+
+            <div class="p-card__body">
+              {% if p.brand %}
+                <p class="p-card__brand">{{ p.brand }}</p>
+              {% endif %}
+
+              <p class="p-card__name">{{ p.name }}</p>
+
+              <div class="p-card__meta">
+                {% for s in p.sizes.all|slice:":2" %}
+                  <span class="meta-pill">{{ s }}</span>
+                {% endfor %}
+              </div>
+
+              <div class="p-card__bottom">
+                <div class="p-card__price ">
+                  {% if p.discount %}
+                    <span class="price-old">{{ p.price|floatformat:0 }} <span class="by-currency-old">ƃ</span></span>
+                    <span class="price-new price-new--red">{{ p.discounted_price|floatformat:0 }} <span class="by-currency">ƃ</span></span>
+                  {% else %}
+                    <span class="price-new">{{ p.price|floatformat:0 }} <span class="by-currency">ƃ</span></span>
+                  {% endif %}
+                </div>
+
+                <button class="p-card__cart"
+        type="button"
+        aria-label="Добавить в корзину"
+        data-no-open="1"
+        data-action="toggle-cart"
+        data-product-id="{{ p.id }}">
+  <i class="fas fa-shopping-basket"></i>
+</button>
+              </div>
+            </div>
+          </div>
+        {% empty %}
+  <div class="empty-state">
+    <div class="empty-state__icon">
+      <i class="fas fa-search"></i>
+    </div>
+    <div class="empty-state__content">
+      <h3 class="empty-state__title">Ничего не найдено</h3>
+      <p class="empty-state__text">
+        Попробуйте изменить фильтры: расширьте диапазон цены или снимите размеры.
+      </p>
+
+      <div class="empty-state__actions">
+        <a class="empty-state__btn" href="{% url 'catalog' %}{% qs page=None min_price=None max_price=None size=None q=None %}">
+          Сбросить фильтры
+        </a>
+        {% if current_category %}
+          <a class="empty-state__link" href="{% url 'catalog' %}{% qs category=None page=None %}">
+            Показать все категории
+          </a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+{% endfor %}
+      </div>
+
+      {% if page_obj.paginator.num_pages > 1 %}
+  <div class="pager">
+    {# Prev #}
+    {% if page_obj.has_previous %}
+      <a class="pager__btn"
+         href="{% url 'catalog' %}{% qs page=page_obj.previous_page_number %}"
+         aria-label="Назад">
+        <i class="fas fa-chevron-left"></i>
+      </a>
+    {% else %}
+      <span class="pager__btn is-disabled" aria-hidden="true"><i class="fas fa-chevron-left"></i></span>
+    {% endif %}
+
+    {# Pages #}
+    {% for p in pagination_pages %}
+      {% if p %}
+        <a class="pager__page {% if p == page_obj.number %}is-active{% endif %}"
+           href="{% url 'catalog' %}{% qs page=p %}">
+          {{ p }}
+        </a>
+      {% else %}
+        <span class="pager__dots">…</span>
+      {% endif %}
+    {% endfor %}
+
+    {# Next #}
+    {% if page_obj.has_next %}
+      <a class="pager__btn"
+         href="{% url 'catalog' %}{% qs page=page_obj.next_page_number %}"
+         aria-label="Вперёд">
+        <i class="fas fa-chevron-right"></i>
+      </a>
+    {% else %}
+      <span class="pager__btn is-disabled" aria-hidden="true"><i class="fas fa-chevron-right"></i></span>
+    {% endif %}
+  </div>
+{% endif %}
+    </section>
+
+  </div>
+</div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+  <script src="{% static 'js/catalog.js' %}" defer></script>
 {% endblock %}

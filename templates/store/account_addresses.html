@@ -1,0 +1,222 @@
+{% extends "store/account_base.html" %}
+{% load static %}
+
+{% block title %}Стильняшки - Адреса{% endblock %}
+
+{% block nav_addresses_active %}is-active{% endblock %}
+{% block account_title %}Адреса{% endblock %}
+
+{% block account_content %}
+<div class="account-stack">
+  <!-- 1) Почтовый адрес -->
+  <div class="card">
+    <div class="card__head">
+      <h2 class="card__title brand-font">Почтовый адрес</h2>
+    </div>
+
+    <form method="post" action="">
+      {% csrf_token %}
+
+      {% if post_form.non_field_errors %}
+        <div class="form-errors" data-form-error role="alert">
+          {% for err in post_form.non_field_errors %}
+            <p class="form-errors__item">{{ err }}</p>
+          {% endfor %}
+        </div>
+      {% endif %}
+
+      <div class="form-grid">
+        <div class="f">
+          <p class="f__label">Фамилия</p>
+          <input class="f__input" type="text"
+                 name="{{ post_form.last_name.html_name }}"
+                 value="{{ post_form.last_name.value|default_if_none:'' }}"
+                 {% if post_form.last_name.errors %}data-has-error="1"{% endif %}>
+          {% if post_form.last_name.errors %}
+            <p class="f__error">{% for err in post_form.last_name.errors %}{{ err }}{% endfor %}</p>
+          {% endif %}
+        </div>
+
+        <div class="f">
+          <p class="f__label">Имя</p>
+          <input class="f__input" type="text"
+                 name="{{ post_form.first_name.html_name }}"
+                 value="{{ post_form.first_name.value|default_if_none:'' }}"
+                 {% if post_form.first_name.errors %}data-has-error="1"{% endif %}>
+          {% if post_form.first_name.errors %}
+            <p class="f__error">{% for err in post_form.first_name.errors %}{{ err }}{% endfor %}</p>
+          {% endif %}
+        </div>
+
+        <div class="f">
+          <p class="f__label">Отчество *</p>
+          <input class="f__input" type="text"
+                 name="{{ post_form.middle_name.html_name }}"
+                 value="{{ post_form.middle_name.value|default_if_none:'' }}"
+                 {% if post_form.middle_name.errors %}data-has-error="1"{% endif %}>
+          {% if post_form.middle_name.errors %}
+            <p class="f__error">{% for err in post_form.middle_name.errors %}{{ err }}{% endfor %}</p>
+          {% endif %}
+        </div>
+
+        <div class="f">
+          <p class="f__label">Телефон *</p>
+          <input class="f__input" type="text"
+                 name="{{ post_form.phone.html_name }}"
+                 value="{{ post_form.phone.value|default_if_none:'' }}"
+                 placeholder="+375 (29) 123-45-67"
+                 {% if post_form.phone.errors %}data-has-error="1"{% endif %}>
+          {% if post_form.phone.errors %}
+            <p class="f__error">{% for err in post_form.phone.errors %}{{ err }}{% endfor %}</p>
+          {% endif %}
+        </div>
+
+        <div class="f">
+          <p class="f__label">Почтовый индекс *</p>
+          <input class="f__input" type="text"
+                 name="{{ post_form.postal_index.html_name }}"
+                 value="{{ post_form.postal_index.value|default_if_none:'' }}"
+                 {% if post_form.postal_index.errors %}data-has-error="1"{% endif %}>
+          {% if post_form.postal_index.errors %}
+            <p class="f__error">{% for err in post_form.postal_index.errors %}{{ err }}{% endfor %}</p>
+          {% endif %}
+        </div>
+
+        <div class="f">
+          <p class="f__label">Город *</p>
+          <input class="f__input" type="text"
+                 name="{{ post_form.city.html_name }}"
+                 value="{{ post_form.city.value|default_if_none:'' }}"
+                 {% if post_form.city.errors %}data-has-error="1"{% endif %}>
+          {% if post_form.city.errors %}
+            <p class="f__error">{% for err in post_form.city.errors %}{{ err }}{% endfor %}</p>
+          {% endif %}
+        </div>
+
+        <div class="f">
+          <p class="f__label">Улица *</p>
+          <input class="f__input" type="text"
+                 name="{{ post_form.street.html_name }}"
+                 value="{{ post_form.street.value|default_if_none:'' }}"
+                 {% if post_form.street.errors %}data-has-error="1"{% endif %}>
+          {% if post_form.street.errors %}
+            <p class="f__error">{% for err in post_form.street.errors %}{{ err }}{% endfor %}</p>
+          {% endif %}
+        </div>
+
+        <div class="f">
+          <p class="f__label">Дом *</p>
+          <input class="f__input" type="text"
+                 name="{{ post_form.house.html_name }}"
+                 value="{{ post_form.house.value|default_if_none:'' }}"
+                 {% if post_form.house.errors %}data-has-error="1"{% endif %}>
+          {% if post_form.house.errors %}
+            <p class="f__error">{% for err in post_form.house.errors %}{{ err }}{% endfor %}</p>
+          {% endif %}
+        </div>
+
+        <div class="f f--wide">
+          <p class="f__label">Квартира (необязательно)</p>
+          <input class="f__input" type="text"
+                 name="{{ post_form.apartment.html_name }}"
+                 value="{{ post_form.apartment.value|default_if_none:'' }}"
+                 {% if post_form.apartment.errors %}data-has-error="1"{% endif %}>
+          {% if post_form.apartment.errors %}
+            <p class="f__error">{% for err in post_form.apartment.errors %}{{ err }}{% endfor %}</p>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="card__actions">
+        <button class="btn btn--yellow" type="submit" name="save_post" value="1">
+          Сохранить почтовый адрес
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- 2) Европочта -->
+  <div class="card">
+    <div class="card__head">
+      <h2 class="card__title brand-font">Европочта</h2>
+    </div>
+
+    <form method="post" action="">
+      {% csrf_token %}
+
+      {% if ep_form.non_field_errors %}
+        <div class="form-errors" data-form-error role="alert">
+          {% for err in ep_form.non_field_errors %}
+            <p class="form-errors__item">{{ err }}</p>
+          {% endfor %}
+        </div>
+      {% endif %}
+
+      <div class="form-grid">
+        <div class="f">
+          <p class="f__label">Фамилия</p>
+          <input class="f__input" type="text"
+                 name="{{ ep_form.last_name.html_name }}"
+                 value="{{ ep_form.last_name.value|default_if_none:'' }}"
+                 {% if ep_form.last_name.errors %}data-has-error="1"{% endif %}>
+          {% if ep_form.last_name.errors %}
+            <p class="f__error">{% for err in ep_form.last_name.errors %}{{ err }}{% endfor %}</p>
+          {% endif %}
+        </div>
+
+        <div class="f">
+          <p class="f__label">Имя</p>
+          <input class="f__input" type="text"
+                 name="{{ ep_form.first_name.html_name }}"
+                 value="{{ ep_form.first_name.value|default_if_none:'' }}"
+                 {% if ep_form.first_name.errors %}data-has-error="1"{% endif %}>
+          {% if ep_form.first_name.errors %}
+            <p class="f__error">{% for err in ep_form.first_name.errors %}{{ err }}{% endfor %}</p>
+          {% endif %}
+        </div>
+
+        <div class="f">
+          <p class="f__label">Отчество *</p>
+          <input class="f__input" type="text"
+                 name="{{ ep_form.middle_name.html_name }}"
+                 value="{{ ep_form.middle_name.value|default_if_none:'' }}"
+                 {% if ep_form.middle_name.errors %}data-has-error="1"{% endif %}>
+          {% if ep_form.middle_name.errors %}
+            <p class="f__error">{% for err in ep_form.middle_name.errors %}{{ err }}{% endfor %}</p>
+          {% endif %}
+        </div>
+
+        <div class="f">
+          <p class="f__label">Телефон *</p>
+          <input class="f__input" type="text"
+                 name="{{ ep_form.phone.html_name }}"
+                 value="{{ ep_form.phone.value|default_if_none:'' }}"
+                 placeholder="+375 (29) 123-45-67"
+                 {% if ep_form.phone.errors %}data-has-error="1"{% endif %}>
+          {% if ep_form.phone.errors %}
+            <p class="f__error">{% for err in ep_form.phone.errors %}{{ err }}{% endfor %}</p>
+          {% endif %}
+        </div>
+
+        <div class="f f--wide">
+          <p class="f__label">Номер отделения *</p>
+          <input class="f__input" type="text"
+                 name="{{ ep_form.europost_branch_number.html_name }}"
+                 value="{{ ep_form.europost_branch_number.value|default_if_none:'' }}"
+                 placeholder="например: 123"
+                 {% if ep_form.europost_branch_number.errors %}data-has-error="1"{% endif %}>
+          {% if ep_form.europost_branch_number.errors %}
+            <p class="f__error">{% for err in ep_form.europost_branch_number.errors %}{{ err }}{% endfor %}</p>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="card__actions">
+        <button class="btn btn--yellow" type="submit" name="save_ep" value="1">
+          Сохранить адрес Европочты
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

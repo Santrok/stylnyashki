@@ -1,31 +1,65 @@
-<div id="mobile-menu" class="hidden fixed inset-0 z-50 bg-white flex-col">
-  <div class="flex justify-end p-4">
-    <button id="mobile-menu-close" class="p-2 hover:bg-gray-100 rounded">
-      <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-      </svg>
-    </button>
+{% load static %}
+<div id="mobileMenu" class="overlay" aria-hidden="true">
+  <div class="drawer" role="dialog" aria-modal="true" aria-label="Меню">
+    <div class="drawer__header">
+      <div class="logo">
+        <div class="logo__img">
+          <img alt="Логотип" src="{% static 'img/logo.svg' %}" />
+        </div>
+        <div class="logo__text">
+          <p class="logo__brand">
+            <span class="c-purple">Сти</span><span class="c-red">льНя</span><span class="c-yellow">шки</span>
+          </p>
+          <p class="logo__tagline">Second Hand for Kids</p>
+        </div>
+      </div>
+
+      <button id="menuCloseBtn" class="icon-btn" aria-label="Закрыть меню">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+
+    <div class="drawer__body">
+      {% if user.is_authenticated %}
+        <a class="drawer-login" href="{% url 'account' %}">
+          <i class="far fa-user"></i>
+          <span>{{ user.first_name|default:user.username }}</span>
+        </a>
+      {% else %}
+        <a class="drawer-login" href="{% url 'login' %}">
+          <i class="far fa-user"></i>
+          <span>Вход</span>
+        </a>
+      {% endif %}
+
+        <a class="drawer-login" href="#" aria-label="Избранное">
+        <i class="far fa-heart"></i>
+        <span>Избранное</span>
+      </a>
+
+      <a class="drawer-login" href="{% url 'cart' %}" aria-label="Корзина">
+        <i class="fas fa-shopping-bag"></i>
+        <span>Корзина</span>
+      </a>
+
+      <p class="drawer__section">Категории</p>
+        {% for category in categories %}
+      <a class="drawer__link  drawer__link--{{ category.icon_background_class|cut:'cat-card--' }}" href="{% url 'catalog' %}?category={{category.slug}}" data-close-menu>
+        <span>{{ category.title }}</span><i class="fas fa-chevron-right"></i>
+      </a>
+        {% endfor %}
+
+      <div class="hr"></div>
+
+      <p class="drawer__section">Информация</p>
+      <a class="drawer__simple" href="#">Доставка</a>
+      <a class="drawer__simple" href="#">Гарантия</a>
+      <a class="drawer__simple" href="#">Контакты</a>
+    </div>
+
+    <div class="drawer__footer">
+      <p><i class="fas fa-phone-alt"></i> +375 (44) 123-45-67</p>
+      <p><i class="fas fa-map-marker-alt"></i> Минск, ТЦ "Детский мир"</p>
+    </div>
   </div>
-  <nav class="flex flex-col gap-4 px-6 text-lg font-medium">
-    <a href="{% url 'home' %}" class="hover:text-pink-600">Главная</a>
-    <a href="{% url 'catalog' %}" class="hover:text-pink-600">Каталог</a>
-    <a href="{% url 'cart' %}" class="hover:text-pink-600">Корзина</a>
-    {% if user.is_authenticated %}
-      <a href="{% url 'account' %}" class="hover:text-pink-600">Аккаунт</a>
-      <a href="{% url 'logout' %}" class="hover:text-pink-600">Выход</a>
-    {% else %}
-      <a href="{% url 'login' %}" class="hover:text-pink-600">Войти</a>
-      <a href="{% url 'register' %}" class="hover:text-pink-600">Регистрация</a>
-    {% endif %}
-  </nav>
 </div>
-<script>
-  document.getElementById('mobile-menu-btn').addEventListener('click', function() {
-    document.getElementById('mobile-menu').classList.remove('hidden');
-    document.getElementById('mobile-menu').classList.add('flex');
-  });
-  document.getElementById('mobile-menu-close').addEventListener('click', function() {
-    document.getElementById('mobile-menu').classList.add('hidden');
-    document.getElementById('mobile-menu').classList.remove('flex');
-  });
-</script>

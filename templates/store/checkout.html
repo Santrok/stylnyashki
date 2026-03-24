@@ -1,60 +1,362 @@
-{% extends 'base.html' %}
-{% block title %}Оформление заказа — Стильняшки{% endblock %}
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Стильняшки - Оформление заказа{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'css/checkout.css' %}">
+{% endblock %}
 
 {% block content %}
-<div class="max-w-2xl mx-auto px-4 py-8">
-  <h1 class="text-2xl font-bold mb-6">Оформление заказа</h1>
-
-  <div class="grid md:grid-cols-5 gap-8">
-    <!-- Checkout Form -->
-    <div class="md:col-span-3">
-      <div class="bg-white rounded-xl shadow-sm p-6">
-        <h2 class="font-semibold text-lg mb-4">Данные доставки</h2>
-        <form method="post" class="space-y-4">
-          {% csrf_token %}
-          <div>
-            <label class="block text-sm font-medium mb-1">Имя и фамилия</label>
-            <input type="text" name="full_name" value="{{ user.get_full_name }}"
-                   class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-pink-400" required/>
-          </div>
-          <div>
-            <label class="block text-sm font-medium mb-1">Email</label>
-            <input type="email" name="email" value="{{ user.email }}"
-                   class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-pink-400" required/>
-          </div>
-          <div>
-            <label class="block text-sm font-medium mb-1">Адрес доставки</label>
-            <textarea name="address" rows="3"
-                      class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-pink-400" required></textarea>
-          </div>
-          <div>
-            <label class="block text-sm font-medium mb-1">Телефон</label>
-            <input type="tel" name="phone"
-                   class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-pink-400"/>
-          </div>
-          <button type="submit" class="w-full bg-pink-600 text-white py-3 rounded-xl font-semibold hover:bg-pink-700 transition-colors">Подтвердить заказ</button>
-        </form>
-      </div>
-    </div>
-
-    <!-- Order Summary -->
-    <div class="md:col-span-2">
-      <div class="bg-white rounded-xl shadow-sm p-6">
-        <h2 class="font-semibold text-lg mb-4">Ваш заказ</h2>
-        {% with items=cart.items.all %}
-          {% for item in items %}
-            <div class="flex justify-between text-sm py-2 border-b">
-              <span class="truncate pr-2">{{ item.product.name }} × {{ item.quantity }}</span>
-              <span class="flex-shrink-0 font-medium">{{ item.subtotal }} ₽</span>
+<main class="checkout-page">
+    <div class="container">
+        <div class="checkout-wrap">
+            <!-- Breadcrumbs -->
+            <div class="co-bc">
+                <a class="co-bc__link" href="{% url 'home' %}">Главная</a>
+                <i class="fas fa-chevron-right co-bc__sep" aria-hidden="true"></i>
+                <a class="co-bc__link" href="{% url 'cart' %}">Кор��ина</a>
+                <i class="fas fa-chevron-right co-bc__sep" aria-hidden="true"></i>
+                <span class="co-bc__current">Оформление заказа</span>
             </div>
-          {% endfor %}
-          <div class="flex justify-between font-bold text-lg mt-4">
-            <span>Итого:</span>
-            <span class="text-pink-600">{{ cart.total }} ₽</span>
-          </div>
-        {% endwith %}
-      </div>
-    </div>
-  </div>
+
+            <!-- Checkout Steps -->
+            <div class="co-steps">
+                <div class="co-steps__inner">
+                    <div class="co-steps__connector" aria-hidden="true">
+                        <div class="co-steps__connector-fill"></div>
+                    </div>
+
+                    <div class="co-step co-step--completed">
+                        <div class="co-step__circle">
+                            <i class="fas fa-check" aria-hidden="true"></i>
+                        </div>
+                        <p class="co-step__label">Корзина</p>
+                    </div>
+
+                    <div class="co-step co-step--active">
+                        <div class="co-step__circle">2</div>
+                        <p class="co-step__label">Оформление</p>
+                    </div>
+
+                    <div class="co-step">
+                        <div class="co-step__circle">3</div>
+                        <p class="co-step__label">Оплата</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Content Grid -->
+            <!-- Content Grid (единая форма на две колонки) -->
+            <form method="post" action="" class="co-grid">
+                {% csrf_token %}
+
+                <!-- Left Column: Forms -->
+                <section class="co-left">
+                    <!-- 1) Контактные данные -->
+                    <div class="co-card">
+                        <div class="co-card__head">
+                            <div class="co-bubble co-bubble--blue">1</div>
+                            <h2 class="co-card__title brand-font">Контактные данные</h2>
+                        </div>
+
+                        {% if form.non_field_errors %}
+                        <div class="form-errors" data-form-error role="alert">
+                            {% for err in form.non_field_errors %}
+                            <p class="form-errors__item">{{ err }}</p>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+
+                        <div class="co-form-grid">
+                            <div class="co-f">
+                                <p class="co-f__label">Имя *</p>
+                                <input class="co-input form-input"
+                                       type="text"
+                                       name="{{ form.first_name.html_name }}"
+                                       value="{{ form.first_name.value|default_if_none:'' }}"
+                                       {% if form.first_name.errors %}data-has-error="1" {% endif %}>
+                                {% if form.first_name.errors %}
+                                <p class="co-f__error">{% for err in form.first_name.errors %}{{ err }}{% endfor %}</p>
+                                {% endif %}
+                            </div>
+
+                            <div class="co-f">
+                                <p class="co-f__label">Фамилия *</p>
+                                <input class="co-input form-input"
+                                       type="text"
+                                       name="{{ form.last_name.html_name }}"
+                                       value="{{ form.last_name.value|default_if_none:'' }}"
+                                       {% if form.last_name.errors %}data-has-error="1" {% endif %}>
+                                {% if form.last_name.errors %}
+                                <p class="co-f__error">{% for err in form.last_name.errors %}{{ err }}{% endfor %}</p>
+                                {% endif %}
+                            </div>
+
+                            <div class="co-f">
+                                <p class="co-f__label">Отчество *</p>
+                                <input class="co-input form-input"
+                                       type="text"
+                                       name="{{ form.middle_name.html_name }}"
+                                       value="{{ form.middle_name.value|default_if_none:'' }}"
+                                       {% if form.middle_name.errors %}data-has-error="1" {% endif %}>
+                                {% if form.middle_name.errors %}
+                                <p class="co-f__error">{% for err in form.middle_name.errors %}{{ err }}{% endfor %}</p>
+                                {% endif %}
+                            </div>
+
+                            <div class="co-f">
+                                <p class="co-f__label">Телефон *</p>
+                                <input class="co-input form-input"
+                                       type="tel"
+                                       name="{{ form.phone.html_name }}"
+                                       value="{{ form.phone.value|default_if_none:'' }}"
+                                       placeholder="+375 (__) ___-__-__"
+                                       {% if form.phone.errors %}data-has-error="1" {% endif %}>
+                                {% if form.phone.errors %}
+                                <p class="co-f__error">{% for err in form.phone.errors %}{{ err }}{% endfor %}</p>
+                                {% endif %}
+                            </div>
+
+                            <div class="co-f">
+  <p class="co-f__label">Instagram *</p>
+  <input class="co-input form-input"
+         type="text"
+         name="{{ form.instagram.html_name }}"
+         value="{{ form.instagram.value|default_if_none:'' }}"
+         placeholder="@username"
+         {% if form.instagram.errors %}data-has-error="1"{% endif %}>
+  {% if form.instagram.errors %}
+    <p class="co-f__error">{% for err in form.instagram.errors %}{{ err }}{% endfor %}</p>
+  {% endif %}
 </div>
+                        </div>
+                    </div>
+
+                    <!-- 2) Способ доставки -->
+                    <div class="co-card">
+                        <div class="co-card__head">
+                            <div class="co-bubble co-bubble--blue">2</div>
+                            <h2 class="co-card__title brand-font">Способ доставки</h2>
+                        </div>
+
+                        <div class="co-delivery-choices co-delivery-choices--2">
+                            <label class="co-delivery-btn">
+                                <input type="radio"
+                                       data-delivery-radio
+                                       name="{{ form.delivery_type.html_name }}"
+                                       value="post"
+                                       {% if form.delivery_type.value == "post" or not form.delivery_type.value %}checked{% endif %}>
+                                <span class="co-delivery-btn__content">
+                  <i class="fas fa-truck" aria-hidden="true"></i>
+                  <span>Белпочта</span>
+                </span>
+                                <span class="co-delivery-btn__badge">от 350₽</span>
+                            </label>
+
+                            <label class="co-delivery-btn">
+                                <input type="radio"
+                                       data-delivery-radio
+                                       name="{{ form.delivery_type.html_name }}"
+                                       value="europost"
+                                       {% if form.delivery_type.value == "europost" %}checked{% endif %}>
+                                <span class="co-delivery-btn__content">
+                  <i class="fas fa-box-open" aria-hidden="true"></i>
+                  <span>ПВЗ (Европочта)</span>
+                </span>
+                            </label>
+                        </div>
+
+                        {% if form.delivery_type.errors %}
+                        <p class="co-f__error">{% for err in form.delivery_type.errors %}{{ err }}{% endfor %}</p>
+                        {% endif %}
+                    </div>
+
+                    <!-- 3) Адрес доставки -->
+                    <div class="co-card">
+                        <div class="co-card__head">
+                            <div class="co-bubble co-bubble--blue">3</div>
+                            <h2 class="co-card__title brand-font">Адрес доставки</h2>
+                        </div>
+
+                        <div class="co-panels">
+                            <div class="co-panel" data-panel="post">
+                                <div class="co-form-grid">
+                                    <div class="co-f">
+                                        <p class="co-f__label">Город *</p>
+                                        <div class="co-rel">
+                                            <input class="co-input form-input co-input--pl"
+                                                   type="text"
+                                                   name="{{ form.city.html_name }}"
+                                                   value="{{ form.city.value|default_if_none:'' }}"
+                                                   {% if form.city.errors %}data-has-error="1" {% endif %}>
+                                            <i class="fas fa-map-marker-alt co-input__icon" aria-hidden="true"></i>
+                                        </div>
+                                        {% if form.city.errors %}
+                                        <p class="co-f__error">{% for err in form.city.errors %}{{ err }}{% endfor %}</p>
+                                        {% endif %}
+                                    </div>
+
+                                    <div class="co-f">
+                                        <p class="co-f__label">Улица *</p>
+                                        <input class="co-input form-input"
+                                               type="text"
+                                               name="{{ form.street.html_name }}"
+                                               value="{{ form.street.value|default_if_none:'' }}"
+                                               {% if form.street.errors %}data-has-error="1" {% endif %}>
+                                        {% if form.street.errors %}
+                                        <p class="co-f__error">{% for err in form.street.errors %}{{ err }}{% endfor %}</p>
+                                        {% endif %}
+                                    </div>
+
+                                    <div class="co-form-grid co-form-grid--3 co-form-grid--gap-sm">
+                                        <div class="co-f">
+                                            <p class="co-f__label">Дом *</p>
+                                            <input class="co-input form-input"
+                                                   type="text"
+                                                   name="{{ form.house.html_name }}"
+                                                   value="{{ form.house.value|default_if_none:'' }}"
+                                                   {% if form.house.errors %}data-has-error="1" {% endif %}>
+                                            {% if form.house.errors %}
+                                            <p class="co-f__error">{% for err in form.house.errors %}{{ err }}{% endfor %}</p>
+                                            {% endif %}
+                                        </div>
+
+                                        <div class="co-f">
+                                            <p class="co-f__label">Квартира</p>
+                                            <input class="co-input form-input"
+                                                   type="text"
+                                                   name="{{ form.apartment.html_name }}"
+                                                   value="{{ form.apartment.value|default_if_none:'' }}"
+                                                   {% if form.apartment.errors %}data-has-error="1" {% endif %}>
+                                            {% if form.apartment.errors %}
+                                            <p class="co-f__error">{% for err in form.apartment.errors %}{{ err }}{% endfor %}</p>
+                                            {% endif %}
+                                        </div>
+
+                                        <div class="co-f">
+                                            <p class="co-f__label">Индекс *</p>
+                                            <input class="co-input form-input"
+                                                   type="text"
+                                                   name="{{ form.postal_index.html_name }}"
+                                                   value="{{ form.postal_index.value|default_if_none:'' }}"
+                                                   {% if form.postal_index.errors %}data-has-error="1" {% endif %}>
+                                            {% if form.postal_index.errors %}
+                                            <p class="co-f__error">{% for err in form.postal_index.errors %}{{ err }}{% endfor %}</p>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="co-panel" data-panel="europost">
+                                <div class="co-form-grid">
+                                    <div class="co-f">
+                                        <p class="co-f__label">Номер отделения *</p>
+                                        <input class="co-input form-input"
+                                               type="text"
+                                               name="{{ form.europost_branch_number.html_name }}"
+                                               value="{{ form.europost_branch_number.value|default_if_none:'' }}"
+                                               placeholder="например: 123"
+                                               {% if form.europost_branch_number.errors %}data-has-error="1" {% endif %}>
+                                        {% if form.europost_branch_number.errors %}
+                                        <p class="co-f__error">{% for err in form.europost_branch_number.errors %}{{ err }}{% endfor %}</p>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Comment -->
+                    <div class="co-card">
+                        <p class="co-f__label">Комментарий к заказу</p>
+                        <textarea class="co-input form-input co-textarea"
+                                  name="{{ form.comment.html_name }}"
+                                  placeholder="Например: позвонить за час до доставки...">{{ form.comment.value|default_if_none:'' }}</textarea>
+                    </div>
+                </section>
+
+                <!-- Right Column: Summary + SUBMIT -->
+                <aside class="co-right">
+                    <div class="co-summary">
+                        <div class="co-summary__top">
+                            <h2 class="co-summary__title brand-font">Ваш заказ</h2>
+                            <p class="co-summary__sub">{{ total_qty }} товара</p>
+                        </div>
+
+                        <div class="co-summary__items custom-scroll">
+                            {% for it in items %}
+                            <div class="co-sitem">
+                                <div class="co-sitem__img">
+                                    {% if it.product.image %}
+                                    <img src="{{ it.product.image.url }}" alt="{{ it.product.name }}">
+                                    {% endif %}
+                                </div>
+
+                                <div class="co-sitem__info">
+                                    <p class="co-sitem__name">{{ it.product.name }}</p>
+                                    <p class="co-sitem__meta">
+                                        {% if it.size %}Р-р: {{ it.size }} · {% endif %}
+                                        x{{ it.quantity }}
+                                    </p>
+                                </div>
+
+                                <p class="co-sitem__price">{{ it.subtotal }} BYN</p>
+                            </div>
+                            {% empty %}
+    <p class="co-note" style="text-align:left;margin:0;">Корзина пуста.</p>
+                            {% endfor %}
+                        </div>
+
+                        <div class="co-summary__bottom">
+                            <div class="co-total">
+                                <div class="co-total__row">
+                                    <span>Товары</span>
+                                    <span>{{ total_sum }} BYN</span>
+                                </div>
+                                <div class="co-total__row">
+                                    <span>Доставка</span>
+                                    <span>{{ delivery_price|default:"0.00" }} BYN</span>
+                                </div>
+                            </div>
+
+                            <div class="co-grand">
+                                <span>Итого</span>
+                                <span class="co-grand__value">{{ total_with_delivery|default:total_sum }} BYN</span>
+                            </div>
+
+                            <!-- КНОПКА ПЕРЕНЕСЕНА СЮДА -->
+                            {% if items %}
+                            <button class="co-pay-btn co-pay-btn--active" type="submit">
+                                <i class="fas fa-lock co-pay-btn__lock" aria-hidden="true"></i>
+                                <span>Оформить заказ</span>
+                            </button>
+
+                            <p class="co-submit__fine" style="margin-top:10px;">
+                                Нажимая кнопку, вы соглашаетесь с условиями
+                                <a class="co-submit__link" href="#">публичной оферты</a>
+                            </p>
+                            {% else %}
+                            <button class="co-pay-btn" type="button" disabled>
+                                <i class="fas fa-lock co-pay-btn__lock" aria-hidden="true"></i>
+                                <span>Оформить заказ</span>
+                            </button>
+
+                            <p class="co-note" style="margin-top:10px;">
+                                Корзина пуста — добавьте товары, чтобы оформить заказ.
+                            </p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </aside>
+            </form>
+        </div>
+    </div>
+</main>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/form_errors_autoclear.js' %}" defer></script>
+<script src="{% static 'js/checkout.js' %}" defer></script>
 {% endblock %}

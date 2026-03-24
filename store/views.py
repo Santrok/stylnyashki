@@ -5,25 +5,34 @@ Includes:
 - Server-rendered page views (home, catalog, cart, checkout, account, auth)
 - DRF API viewsets (products, cart)
 """
+from django.conf import settings
+from datetime import timedelta
+from decimal import Decimal
 
+from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
+from django.db import transaction
 from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.contrib import messages
-from django.db.models import Q
+from django.db.models import Q, Min, Max
+from django.utils import timezone
+from django.utils.http import url_has_allowed_host_and_scheme
 
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticatedOrReadOnly
 
-from .models import Product, SizeOption, Cart, CartItem
+from .forms import RegisterForm, LoginForm, AccountForm, PostalAddressForm, EuropostAddressForm, CheckoutForm
+from .models import Product, SizeOption, Cart, CartItem, Category, Address, Order, OrderItem
 from .serializers import (
     ProductSerializer, ProductListSerializer,
     CartSerializer, CartItemSerializer,
 )
-
+from .services.merge import merge_cart_on_login, merge_favorites_on_login
+from .utils import _build_pagination_pages
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -40,136 +49,532 @@ def get_or_create_cart(request):
     return cart
 
 
+
 # ---------------------------------------------------------------------------
 # Server-rendered page views
 # ---------------------------------------------------------------------------
 
 def home(request):
     """Render the home / landing page with featured products."""
-    featured = Product.objects.filter(is_active=True)[:8]
-    return render(request, 'store/home.html', {'featured': featured})
+    products = Product.objects.filter(is_active=True, status=Product.Status.AVAILABLE).order_by("?")[:8]
+
+    context = {
+        "products": products,
+    }
+    return render(request, 'store/home.html', context)
 
 
 def catalog(request):
-    """
-    Render the product catalogue with optional GET-param filtering.
+    base_qs = Product.objects.select_related("category").prefetch_related("sizes").filter(is_active=True, status=Product.Status.AVAILABLE)
+    qs = base_qs
 
-    Supported query params:
-        q        – text search in name/brand
-        category – exact category match
-        season   – exact season match
-        brand    – exact brand match
-        min_price / max_price – price range
-    """
-    qs = Product.objects.filter(is_active=True)
-
-    q = request.GET.get('q', '').strip()
+    q = request.GET.get("q", "").strip()
     if q:
         qs = qs.filter(Q(name__icontains=q) | Q(brand__icontains=q))
 
-    category = request.GET.get('category', '').strip()
-    if category:
-        qs = qs.filter(category=category)
+    category_slug = request.GET.get("category", "").strip()
+    current_category = None
+    current_root = None
+    if category_slug:
+        current_category = Category.objects.filter(slug=category_slug).first()
+        if current_category:
+            current_root = current_category.get_root()
+            qs = qs.filter(category__in=current_category.get_descendants(include_self=True))
+        else:
+            qs = qs.none()
 
-    season = request.GET.get('season', '').strip()
-    if season:
-        qs = qs.filter(season=season)
+    selected_sizes = request.GET.getlist("size")
+    if selected_sizes:
+        qs = qs.filter(sizes__value__in=selected_sizes).distinct()
 
-    brand = request.GET.get('brand', '').strip()
-    if brand:
-        qs = qs.filter(brand=brand)
-
-    min_price = request.GET.get('min_price', '').strip()
+    min_price = request.GET.get("min_price", "").strip()
     if min_price:
         try:
             qs = qs.filter(price__gte=float(min_price))
         except ValueError:
             pass
 
-    max_price = request.GET.get('max_price', '').strip()
+    max_price = request.GET.get("max_price", "").strip()
     if max_price:
         try:
             qs = qs.filter(price__lte=float(max_price))
         except ValueError:
             pass
 
-    # Build filter choice lists for the sidebar
-    categories = Product.objects.filter(is_active=True).values_list('category', flat=True).distinct()
-    seasons = Product.objects.filter(is_active=True).values_list('season', flat=True).distinct()
-    brands = Product.objects.filter(is_active=True).values_list('brand', flat=True).distinct()
+    root_categories = Category.objects.filter(type="level_1").order_by("tree_id", "lft")
 
-    return render(request, 'store/catalog.html', {
-        'products': qs,
-        'categories': [c for c in categories if c],
-        'seasons': [s for s in seasons if s],
-        'brands': [b for b in brands if b],
-        'query_params': request.GET,
+    price_stats = qs.aggregate(pmin=Min("price"), pmax=Max("price"))
+    price_min = price_stats["pmin"]
+    price_max = price_stats["pmax"]
+
+    sizes = list(SizeOption.objects.all().order_by("sort", "value"))
+
+    sort = request.GET.get("sort", "new").strip() or "new"
+    sort_map = {
+        "new": "-created_at",
+        "price_asc": "price",
+        "price_desc": "-price",
+        "discount": "-discount",
+    }
+    order_by = sort_map.get(sort, "-created_at")
+
+    breadcrumbs = []
+    if current_category:
+        breadcrumbs = list(current_category.get_ancestors(include_self=True))
+
+    paginator = Paginator(qs.order_by(order_by), 20)
+    page_obj = paginator.get_page(request.GET.get("page"))
+
+    pagination_pages = _build_pagination_pages(page_obj, window=2)
+
+    return render(request, "store/catalog.html", {
+        "products": page_obj.object_list,
+        "page_obj": page_obj,
+        "pagination_pages": pagination_pages,
+
+        "root_categories": root_categories,
+        "current_category": current_category,
+        "current_root": current_root,
+        "breadcrumbs": breadcrumbs,
+
+        "selected_sizes": selected_sizes,
+        "sizes": sizes,
+
+        "price_min": price_min,
+        "price_max": price_max,
+
+        "sort": sort,
+        "query_params": request.GET,
     })
 
 
 def cart_page(request):
     """Render the shopping cart page."""
     cart = get_or_create_cart(request)
-    return render(request, 'store/cart.html', {'cart': cart})
+
+    # подгружаем позиции
+    items = cart.items.select_related("product", "size")
+
+    available_items = items.filter(availability=CartItem.Availability.AVAILABLE)
+
+    # даже если quantity есть в модели, в UI не меняем, но сумму считать корректно
+    total_qty = sum(i.quantity for i in available_items)
+    total_sum = sum(i.subtotal for i in available_items)
+
+    return render(request, 'store/cart.html', {
+        'cart': cart,
+        'items': items,
+        'total_qty': total_qty,
+        'total_sum': total_sum,
+    })
 
 
-@login_required
-def checkout(request):
-    """Render the checkout page (requires login)."""
+def checkout_view(request):
     cart = get_or_create_cart(request)
-    if request.method == 'POST':
-        # Stub: clear cart and show success
-        cart.items.all().delete()
-        messages.success(request, 'Заказ оформлен! Спасибо за покупку.')
-        return redirect('home')
-    return render(request, 'store/checkout.html', {'cart': cart})
+
+    # На checkout оформляем ТОЛЬКО доступные позиции текущей корзины
+    items = (
+        cart.items
+        .select_related("product", "size")
+        .filter(availability=CartItem.Availability.AVAILABLE)
+        .all()
+    )
+
+    total_qty = sum(i.quantity for i in items)
+    total_sum = sum(i.subtotal for i in items)
+
+    # сколько недоступных позиций есть в корзине (для предупреждения)
+    unavailable_count = cart.items.exclude(availability=CartItem.Availability.AVAILABLE).count()
+
+    user = request.user if request.user.is_authenticated else None
+    profile = getattr(user, "profile", None) if user else None
+
+    # Сохранённые адреса
+    post_addr = None
+    ep_addr = None
+    if user:
+        post_addr = Address.objects.filter(user=user, type=Address.Type.POST).first()
+        ep_addr = Address.objects.filter(user=user, type=Address.Type.EUROPOST).first()
+
+    def build_initial():
+        initial = {}
+
+        if user:
+            if user.first_name:
+                initial["first_name"] = user.first_name
+            if user.last_name:
+                initial["last_name"] = user.last_name
+
+        if profile and getattr(profile, "phone", ""):
+            initial["phone"] = profile.phone
+
+        if profile and getattr(profile, "instagram_username", ""):
+            initial["instagram"] = profile.instagram_username
+
+        # middle_name priority: profile -> post_addr -> ep_addr
+        if profile and getattr(profile, "middle_name", ""):
+            initial["middle_name"] = profile.middle_name
+        elif post_addr and getattr(post_addr, "middle_name", ""):
+            initial["middle_name"] = post_addr.middle_name
+        elif ep_addr and getattr(ep_addr, "middle_name", ""):
+            initial["middle_name"] = ep_addr.middle_name
+
+        # default delivery type: если есть только европочта — выбираем её
+        initial["delivery_type"] = Order.DeliveryType.EUROPOST if (ep_addr and not post_addr) else Order.DeliveryType.POST
+
+        if post_addr:
+            initial.update({
+                "postal_index": post_addr.postal_index,
+                "city": post_addr.city,
+                "street": post_addr.street,
+                "house": post_addr.house,
+                "apartment": post_addr.apartment,
+            })
+
+        if ep_addr:
+            initial.update({
+                "europost_branch_number": ep_addr.europost_branch_number,
+            })
+
+        return initial
+
+    if request.method == "POST":
+        form = CheckoutForm(request.POST)
+
+        if unavailable_count:
+            return redirect("checkout_unavailable")
+
+        # нечего оформлять
+        if not items:
+            if unavailable_count > 0:
+                messages.error(request, "В корзине нет доступных товаров для оформления. Недоступные товары отмечены серым.")
+            else:
+                messages.error(request, "Корзина пуста. Добавьте товары, чтобы оформить заказ.")
+            return redirect("cart")
+
+        if form.is_valid():
+            cd = form.cleaned_data
+            delivery_price = Decimal("0.00")
+            product_ids = list(items.values_list("product_id", flat=True))
+
+            with transaction.atomic():
+                now = timezone.now()
+                reserve_until = now + timedelta(minutes=getattr(settings, "RESERVE_TTL_MINUTES", 60))
+
+                # блокируем товары, которые пытаемся зарезервировать
+                locked_products = (
+                    Product.objects
+                    .select_for_update()
+                    .filter(id__in=product_ids)
+                )
+
+                # если есть хоть один недоступный (reserved/sold/неактивные) — стоп оформления
+                unavailable = locked_products.filter(
+                    Q(status__in=[Product.Status.RESERVED, Product.Status.SOLD]) | Q(is_active=False)
+                )
+                print(unavailable, 'недоступные товары')
+                if unavailable.exists():
+                    bad_ids = list(unavailable.values_list("id", flat=True))
+                    # отмечаем их серым у всех пользователей (и у себя тоже)
+                    CartItem.objects.filter(product_id__in=bad_ids).update(
+                        availability=CartItem.Availability.RESERVED
+                    )
+                    # передаём их ids в сессию для страницы недоступности
+                    request.session["checkout_unavailable_product_ids"] = bad_ids
+                    # редиректим (НЕ создаём заказ — оформление ОСТАНАВЛИВАЕМ сразу)
+                    print("здесь должен был быть редирект")
+                    return redirect("checkout_unavailable")
+
+                # если все доступны — оформляем заказ как раньше
+                order = Order.objects.create(
+                    user=user if user else None,
+                    status=Order.Status.NEW,
+                    delivery_type=cd["delivery_type"],
+
+                    first_name=cd["first_name"],
+                    last_name=cd["last_name"],
+                    middle_name=cd["middle_name"],
+                    phone=cd["phone"],
+                    instagram=cd["instagram"],
+
+                    postal_index=cd.get("postal_index", "") if cd["delivery_type"] == Order.DeliveryType.POST else "",
+                    city=cd.get("city", "") if cd["delivery_type"] == Order.DeliveryType.POST else "",
+                    street=cd.get("street", "") if cd["delivery_type"] == Order.DeliveryType.POST else "",
+                    house=cd.get("house", "") if cd["delivery_type"] == Order.DeliveryType.POST else "",
+                    apartment=cd.get("apartment", "") if cd["delivery_type"] == Order.DeliveryType.POST else "",
+
+                    europost_branch_number=cd.get("europost_branch_number", "") if cd["delivery_type"] == Order.DeliveryType.EUROPOST else "",
+
+                    comment=cd.get("comment", ""),
+                    delivery_price=delivery_price,
+                )
+
+                OrderItem.objects.bulk_create([
+                    OrderItem(
+                        order=order,
+                        product=ci.product,
+                        size=ci.size,
+                        product_name=ci.product.name,
+                        price=ci.product.discounted_price,
+                        quantity=ci.quantity,
+                    )
+                    for ci in items
+                ])
+
+                # резервируем товары (они пропадают из выдачи, т.к. выдача = только AVAILABLE)
+                locked_products.update(status=Product.Status.RESERVED, reserved_until=reserve_until)
+
+                # во всех корзинах помечаем эти товары серым RESERVED
+                CartItem.objects.filter(product_id__in=product_ids).update(
+                    availability=CartItem.Availability.RESERVED
+                )
+
+                # у текущего пользователя удаляем эти позиции из корзины (как договорились)
+                cart.items.filter(product_id__in=product_ids).delete()
+
+                order.recalc_totals(save=True)
+
+            return redirect("checkout_success", public_id=order.public_id)
+    else:
+        form = CheckoutForm(initial=build_initial())
+
+    delivery_price = Decimal("0.00")
+    total_with_delivery = total_sum + delivery_price
+
+    return render(request, "store/checkout.html", {
+        "form": form,
+        "cart": cart,
+        "items": items,  # только доступные позиции
+        "unavailable_count": unavailable_count,
+        "total_qty": total_qty,
+        "total_sum": total_sum,
+        "delivery_price": delivery_price,
+        "total_with_delivery": total_with_delivery,
+    })
+
+
+def checkout_success_view(request, public_id):
+    order = get_object_or_404(Order, public_id=public_id)
+    return render(request, "store/checkout_success.html", {"order": order})
+
+def checkout_unavailable_view(request):
+    ids = request.session.pop("checkout_unavailable_product_ids", [])
+    products = Product.objects.filter(id__in=ids).only("id", "name", "image", "status")
+    return render(request, "store/checkout_unavailable.html", {
+        "products": products,
+    })
 
 
 @login_required
-def account(request):
-    """Render the user account / profile page."""
-    return render(request, 'store/account.html', {'user': request.user})
+def account_view(request):
+    user = request.user
+    profile = getattr(user, "profile", None)
+
+    initial = {
+        "username": user.username,
+        "first_name": user.first_name,
+        "last_name": user.last_name,
+        "email": user.email,
+        "phone": getattr(profile, "phone", "") if profile else "",
+        "city": getattr(profile, "city", "") if profile else "",
+        "instagram_username": getattr(profile, "instagram_username", "") if profile else "",
+    }
+
+    if request.method == "POST":
+        form = AccountForm(request.POST, user=user)
+        if form.is_valid():
+            form.save()
+
+            # безопасно “освежим” сессию
+            update_session_auth_hash(request, request.user)
+
+            messages.success(request, "Изменения сохранены.")
+            return redirect("account")
+    else:
+        form = AccountForm(initial=initial, user=user)
+
+    return render(request, "store/account.html", {"form": form})
+
+
+@login_required
+def account_addresses_view(request):
+    user = request.user
+    profile = getattr(user, "profile", None)
+
+    postal_obj, _ = Address.objects.get_or_create(user=user, type=Address.Type.POST)
+    ep_obj, _ = Address.objects.get_or_create(user=user, type=Address.Type.EUROPOST)
+
+    # Автоподтягивание (ТОЛЬКО если в адресе пусто)
+    def prefill_name_phone(obj: Address):
+        changed = False
+
+        if not obj.first_name and user.first_name:
+            obj.first_name = user.first_name
+            changed = True
+        if not obj.last_name and user.last_name:
+            obj.last_name = user.last_name
+            changed = True
+        if not obj.phone and profile and getattr(profile, "phone", ""):
+            obj.phone = profile.phone
+            changed = True
+
+        if changed:
+            obj.save(update_fields=["first_name", "last_name", "phone", "updated_at"])
+
+    prefill_name_phone(postal_obj)
+    prefill_name_phone(ep_obj)
+
+    if request.method == "POST":
+        if "save_post" in request.POST:
+            post_form = PostalAddressForm(request.POST, instance=postal_obj, prefix="post")
+            ep_form = EuropostAddressForm(instance=ep_obj, prefix="ep")
+
+            if post_form.is_valid():
+                obj = post_form.save(commit=False)
+                obj.user = user
+                obj.type = Address.Type.POST
+                obj.save()
+                messages.success(request, "Почтовый адрес сохранён.")
+                return redirect("account_addresses")
+
+        elif "save_ep" in request.POST:
+            ep_form = EuropostAddressForm(request.POST, instance=ep_obj, prefix="ep")
+            post_form = PostalAddressForm(instance=postal_obj, prefix="post")
+
+            if ep_form.is_valid():
+                obj = ep_form.save(commit=False)
+                obj.user = user
+                obj.type = Address.Type.EUROPOST
+                obj.save()
+                messages.success(request, "Адрес Европочты сохранён.")
+                return redirect("account_addresses")
+        else:
+            # если нажали submit без имени — просто отрисуем обе формы с текущим instance
+            post_form = PostalAddressForm(instance=postal_obj, prefix="post")
+            ep_form = EuropostAddressForm(instance=ep_obj, prefix="ep")
+    else:
+        post_form = PostalAddressForm(instance=postal_obj, prefix="post")
+        ep_form = EuropostAddressForm(instance=ep_obj, prefix="ep")
+
+    return render(request, "store/account_addresses.html", {
+        "post_form": post_form,
+        "ep_form": ep_form,
+    })
+
+
+@login_required
+def account_orders_view(request):
+    """
+    Список заказов пользователя с пагинацией.
+    Показываем последние заказы первыми.
+    """
+    qs = (
+        Order.objects
+        .filter(user=request.user)
+        .select_related('user')
+        .order_by('-created_at')
+    )
+
+    # Пагинация: ?page=2
+    paginator = Paginator(qs, 5)
+    page = request.GET.get('page', 1)
+    try:
+        orders_page = paginator.page(page)
+    except PageNotAnInteger:
+        orders_page = paginator.page(1)
+    except EmptyPage:
+        orders_page = paginator.page(paginator.num_pages)
+
+    return render(request, 'store/account_orders.html', {
+        'orders_page': orders_page,
+    })
+
+
+@login_required
+def account_order_detail_view(request, public_id):
+    """
+    Детальная страница заказа. Видна только владельцу.
+    Показываем позиции, статус, дату, сумму, и если заказ отменён по причине "товар куплен" —
+    даём пояснение и кнопки.
+    """
+    order = get_object_or_404(
+        Order.objects.select_related('user').prefetch_related(
+            'items__product', 'items__size'
+        ),
+        public_id=public_id,
+        user=request.user
+    )
+
+    # Подготовим флаг и список проблемных товаров, если заказ отменён
+    problem_products = []
+    if order.status == Order.Status.CANCELED:
+        # Опционально: пометим товары, которые сейчас sold и стали причиной отмены
+        product_ids = list(order.items.values_list('product_id', flat=True))
+        sold_products = Product.objects.filter(id__in=product_ids, status=Product.Status.SOLD)
+        problem_products = list(sold_products)
+
+    return render(request, 'store/account_order_detail.html', {
+        'order': order,
+        'problem_products': problem_products,
+    })
+
+
+
+def _get_next_url(request, default='/account/'):
+    next_url = request.POST.get('next') or request.GET.get('next') or default
+    if not url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()}):
+        return default
+    return next_url
 
 
 def login_view(request):
-    """Handle GET (show form) and POST (authenticate) for the login page."""
     if request.user.is_authenticated:
         return redirect('account')
+
     if request.method == 'POST':
-        username = request.POST.get('username', '').strip()
-        password = request.POST.get('password', '')
-        user = authenticate(request, username=username, password=password)
-        if user is not None:
-            login(request, user)
-            next_url = request.GET.get('next', '/account/')
-            return redirect(next_url)
-        messages.error(request, 'Неверный логин или пароль.')
-    return render(request, 'store/login.html')
+        form = LoginForm(request.POST, request=request)
+        if form.is_valid():
+            login(request, form.user)
+
+            merge_cart_on_login(request, form.user)
+            merge_favorites_on_login(request, form.user)
+
+            return redirect(_get_next_url(request))
+        # form.errors покажем в шаблоне
+    else:
+        form = LoginForm(request=request)
+
+    return render(request, 'store/login.html', {
+        'form': form,
+        'next': _get_next_url(request),
+    })
 
 
 def register_view(request):
-    """Handle GET (show form) and POST (create account) for the register page."""
     if request.user.is_authenticated:
         return redirect('account')
+
     if request.method == 'POST':
-        username = request.POST.get('username', '').strip()
-        email = request.POST.get('email', '').strip()
-        password1 = request.POST.get('password1', '')
-        password2 = request.POST.get('password2', '')
-        if password1 != password2:
-            messages.error(request, 'Пароли не совпадают.')
-        elif User.objects.filter(username=username).exists():
-            messages.error(request, 'Пользователь с таким именем уже существует.')
-        else:
-            user = User.objects.create_user(username=username, email=email, password=password1)
+        form = RegisterForm(request.POST)
+        if form.is_valid():
+            user = form.save()
             login(request, user)
-            messages.success(request, f'Добро пожаловать, {username}!')
-            return redirect('account')
-    return render(request, 'store/register.html')
+
+            merge_cart_on_login(request, user)
+            merge_favorites_on_login(request, user)
+
+            messages.success(request, f'Добро пожаловать, {user.username}!')
+            return redirect(_get_next_url(request))
+    else:
+        form = RegisterForm()
+
+    return render(request, 'store/register.html', {
+        'form': form,
+        'next': _get_next_url(request),
+    })
 
 
 def logout_view(request):
-    """Log the user out and redirect to home."""
     logout(request)
     return redirect('home')
 

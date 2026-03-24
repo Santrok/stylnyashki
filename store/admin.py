@@ -1,7 +1,9 @@
 """Admin registrations for store models."""
 
 from django.contrib import admin
-from .models import Product, SizeOption, Cart, CartItem
+from mptt.admin import DraggableMPTTAdmin
+
+from .models import Product, SizeOption, Cart, CartItem, Category, Order
 
 
 @admin.register(SizeOption)
@@ -42,3 +44,24 @@ class CartAdmin(admin.ModelAdmin):
 
     list_display = ['id', 'user', 'session_key', 'created_at']
     inlines = [CartItemInline]
+
+@admin.register(Category)
+class CategoryAdmin(DraggableMPTTAdmin):
+    """
+    Класс управления отображения в админ панели сущности: Category
+    """
+    prepopulated_fields = {"slug": ("title",)}
+    mptt_level_indent = 30
+    max_level_indent = 3
+
+    def get_queryset(self, request):
+        """
+        Ограничивает уровень вложенности каждой категории
+        """
+        qs = super().get_queryset(request)
+        return qs.filter(level__lte=self.max_level_indent)
+
+
+@admin.register(Order)
+class OrderAdmin(admin.ModelAdmin):
+    pass

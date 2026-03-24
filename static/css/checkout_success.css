@@ -1,0 +1,142 @@
+.success{
+  min-height: calc(100vh - 120px);
+  display:flex;
+  align-items:center;
+  padding: 18px 0 26px;
+  background: #F3F4F6;
+}
+
+.success-center{
+  width: 100%;
+  display:flex;
+  justify-content:center;
+}
+
+.success-card{
+  width: min(520px, 100%);
+  background:#fff;
+  border: 1px solid #f3f4f6;
+  border-radius: 16px;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.08);
+  padding: 22px 18px;
+  text-align:center;
+}
+
+@media (min-width: 640px){
+  .success-card{ padding: 26px 24px; }
+}
+
+.success-icon{
+  width: 54px;
+  height: 54px;
+  border-radius: 999px;
+  background: #10B981;
+  color:#fff;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  margin: 0 auto 12px;
+  font-size: 20px;
+}
+
+.success-title{
+  margin: 0;
+  font-size: 22px;
+  font-weight: 900;
+  color:#111827;
+}
+
+.success-text{
+  margin: 10px 0 0;
+  color:#6b7280;
+  font-weight: 800;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.success-actions{
+  margin-top: 16px;
+  display:flex;
+  gap: 10px;
+  justify-content:center;
+  flex-wrap:wrap;
+}
+
+.btn--ghost{
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  color:#111827;
+}
+.btn--ghost:hover{
+  border-color: rgba(201,66,132,.35);
+  color:#C94284;
+}
+
+.success-note{
+  margin: 14px 0 0;
+  font-size: 11px;
+  font-weight: 800;
+  color:#9ca3af;
+  line-height: 1.4;
+}
+
+.success-actions{
+  margin-top: 16px;
+  display:flex;
+  gap: 10px;
+  justify-content:center;
+  flex-wrap:wrap;
+}
+
+/* Buttons (site-like) */
+.success-btn{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap: 10px;
+
+  padding: 12px 16px;
+  border-radius: 14px;
+
+  font-weight: 900;
+  font-size: 13px;
+  text-decoration: none;
+
+  transition: transform .15s ease, filter .15s ease, box-shadow .15s ease, border-color .15s ease, color .15s ease;
+  user-select:none;
+}
+
+.success-btn:active{
+  transform: translateY(1px);
+}
+
+/* Primary (yellow) */
+.success-btn--primary{
+  background: #F8C545;          /* brand yellow */
+  color:#111827;
+  border: 0;
+  box-shadow: 0 12px 26px rgba(0,0,0,0.10);
+}
+.success-btn--primary:hover{
+  filter: brightness(0.98);
+  transform: scale(1.01);
+}
+
+/* Ghost (white) */
+.success-btn--ghost{
+  background:#fff;
+  color:#111827;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 10px 22px rgba(0,0,0,0.06);
+}
+.success-btn--ghost:hover{
+  border-color: rgba(201, 66, 132, 0.35);
+  color:#C94284;               /* brand purple */
+  transform: scale(1.01);
+}
+
+.success-icon--warn{
+  background: #FFFBEB;
+  color: #F59E0B;
+  border: 1px solid rgba(245,158,11,.25);
+}

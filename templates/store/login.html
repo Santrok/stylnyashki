@@ -1,29 +1,113 @@
-{% extends 'base.html' %}
-{% block title %}Вход — Стильняшки{% endblock %}
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Стильняшки - Вход{% endblock %}
+
+{% block body_class %}body-auth body-auth--white{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'css/auth.css' %}">
+{% endblock %}
 
 {% block content %}
-<div class="min-h-[60vh] flex items-center justify-center px-4 py-12">
-  <div class="bg-white rounded-2xl shadow-md p-8 w-full max-w-md">
-    <h1 class="text-2xl font-bold text-center mb-6">Вход в аккаунт</h1>
-    <form method="post" class="space-y-5">
-      {% csrf_token %}
-      <div>
-        <label class="block text-sm font-medium mb-1" for="id_username">Имя пользователя</label>
-        <input id="id_username" type="text" name="username" autocomplete="username"
-               class="w-full border rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-pink-400"
-               required autofocus/>
+<main class="auth-page">
+  <div class="auth-page__wrap">
+    <div class="auth-card">
+      <div class="auth-card__head">
+        <h1 class="auth-card__title brand-font">С возвращением!</h1>
+        <p class="auth-card__subtitle">Войдите, чтобы отслеживать заказы и использовать бонусы</p>
       </div>
-      <div>
-        <label class="block text-sm font-medium mb-1" for="id_password">Пароль</label>
-        <input id="id_password" type="password" name="password" autocomplete="current-password"
-               class="w-full border rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-pink-400"
-               required/>
+
+      <form class="auth-form" method="post">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{{ next }}">
+
+        {% if form.non_field_errors %}
+          <div class="form-errors" role="alert">
+            {% for err in form.non_field_errors %}
+              <p class="form-errors__item">{{ err }}</p>
+            {% endfor %}
+          </div>
+        {% endif %}
+
+        <div class="field">
+          <label class="field__label" for="{{ form.username.id_for_label }}">Имя пользователя</label>
+          <div class="field__control">
+            <span class="field__icon" aria-hidden="true">
+              <i class="far fa-user"></i>
+            </span>
+
+            <input class="field__input"
+                   id="{{ form.username.id_for_label }}"
+                   name="{{ form.username.html_name }}"
+                   value="{{ form.username.value|default_if_none:'' }}"
+                   placeholder="username"
+                   type="text"
+                   autocomplete="username"
+                   {% if form.username.errors %}data-has-error='1'{% endif %}
+                   required>
+
+            {% if form.username.errors %}
+              <p class="field__error" data-field-error>
+                {% for err in form.username.errors %}{{ err }}{% endfor %}
+              </p>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="field">
+          <label class="field__label" for="{{ form.password.id_for_label }}">Пароль</label>
+          <div class="field__control">
+            <span class="field__icon" aria-hidden="true">
+              <i class="fas fa-lock"></i>
+            </span>
+
+            <input class="field__input"
+                   id="{{ form.password.id_for_label }}"
+                   name="{{ form.password.html_name }}"
+                   placeholder="••••••••"
+                   type="password"
+                   autocomplete="current-password"
+                   {% if form.password.errors %}data-has-error='1'{% endif %}
+                   required>
+
+            <button class="field__toggle"
+                    type="button"
+                    aria-label="Показать/скрыть пароль"
+                    data-action="toggle-password"
+                    data-target="#{{ form.password.id_for_label }}">
+              <i class="far fa-eye"></i>
+            </button>
+
+            {% if form.password.errors %}
+              <p class="field__error" data-field-error>
+                {% for err in form.password.errors %}{{ err }}{% endfor %}
+              </p>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="auth-form__row">
+
+          <a class="auth-link" href="{% url 'password_reset' %}">Забыли пароль?</a>
+        </div>
+
+        <button class="auth-btn auth-btn--primary" type="submit">Войти</button>
+      </form>
+
+      <div class="auth-card__foot">
+        <span class="auth-muted">Нет аккаунта?</span>
+        <a href="{% url 'register' %}" class="auth-link auth-link--strong">Регистрация</a>
       </div>
-      <button type="submit" class="w-full bg-pink-600 text-white py-3 rounded-xl font-semibold hover:bg-pink-700 transition-colors">Войти</button>
-    </form>
-    <p class="text-center text-sm text-gray-500 mt-6">
-      Нет аккаунта? <a href="{% url 'register' %}" class="text-pink-600 hover:underline">Зарегистрироваться</a>
-    </p>
+    </div>
+
+    <div class="auth-blob auth-blob--yellow"></div>
+    <div class="auth-blob auth-blob--blue"></div>
   </div>
-</div>
+</main>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/auth.js' %}" defer></script>
+<script src="{% static 'js/form_errors_autoclear.js' %}" defer></script>
 {% endblock %}

@@ -7,9 +7,9 @@ All secrets are read from environment variables (see .env.example).
 
 import os
 from pathlib import Path
-from dotenv import load_dotenv
+from dotenv import dotenv_values
 
-load_dotenv()
+env_keys = dotenv_values()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -53,6 +53,8 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                "store.context_processors.header_counts",
+                "store.context_processors.header_categories",
             ],
         },
     },
@@ -106,9 +108,24 @@ LOGIN_REDIRECT_URL = '/account/'
 LOGOUT_REDIRECT_URL = '/'
 
 REST_FRAMEWORK = {
-    'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.IsAuthenticatedOrReadOnly',
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework.authentication.SessionAuthentication",
+    ],
+    "DEFAULT_PERMISSION_CLASSES": [
+        "rest_framework.permissions.AllowAny",
     ],
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 20,
 }
+
+EMAIL_BACKEND = env_keys.get("EMAIL_BACKEND")
+EMAIL_HOST_PASSWORD = env_keys.get("EMAIL_HOST_PASSWORD")
+EMAIL_HOST = env_keys.get("EMAIL_HOST")
+EMAIL_PORT = env_keys.get("EMAIL_PORT")
+EMAIL_HOST_USER = env_keys.get("EMAIL_HOST_USER")
+EMAIL_USE_SSL = env_keys.get("EMAIL_USE_SSL")
+
+DEFAULT_FROM_EMAIL = f"Стильняшки <{EMAIL_HOST_USER}>"
+
+
+RESERVE_TTL_MINUTES = 60

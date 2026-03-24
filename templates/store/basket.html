@@ -1,0 +1,243 @@
+{% extends "base.html" %}
+{% block title %}Стильняшки - Корзина{% endblock %}
+
+{% block content %}
+<main class="flex-1 flex flex-col py-4 sm:py-6 overflow-hidden bg-gray-50">
+  <div class="layout-container flex flex-col flex-1 overflow-hidden">
+    <!-- Breadcrumbs -->
+    <div class="text-xs text-gray-400 mb-4 flex items-center gap-2 shrink-0">
+      <a href="{% url 'home' %}" class="hover:text-brand-purple cursor-pointer">Главная</a>
+      <i class="fas fa-chevron-right text-[8px]"></i>
+      <span class="text-gray-800 font-semibold">Корзина</span>
+    </div>
+
+    <!-- Checkout Steps -->
+    <div class="flex justify-center mb-6 sm:mb-8 shrink-0">
+      <div class="w-full sm:w-1/2 flex justify-between relative">
+        <div class="step-connector"></div>
+
+        <div class="flex flex-col items-center step-item step-active">
+          <div class="w-8 h-8 rounded-full border-2 border-gray-300 bg-white flex items-center justify-center font-bold text-sm mb-1 step-circle">1</div>
+          <p class="text-xs font-bold text-brand-purple">Корзина</p>
+        </div>
+
+        <div class="flex flex-col items-center step-item">
+          <div class="w-8 h-8 rounded-full border-2 border-gray-300 bg-white text-gray-400 flex items-center justify-center font-bold text-sm mb-1 step-circle">2</div>
+          <p class="text-xs font-semibold text-gray-400">Оформление</p>
+        </div>
+
+        <div class="flex flex-col items-center step-item">
+          <div class="w-8 h-8 rounded-full border-2 border-gray-300 bg-white text-gray-400 flex items-center justify-center font-bold text-sm mb-1 step-circle">3</div>
+          <p class="text-xs font-semibold text-gray-400">Оплата</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Cart Layout -->
+    <div class="flex flex-col lg:flex-row gap-4 lg:gap-8 flex-1 overflow-hidden">
+      <!-- Left Column: Items List -->
+      <div class="flex-1 flex flex-col bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden min-h-[320px]">
+        <div class="hidden md:grid grid-cols-12 gap-4 p-4 border-b border-gray-100 bg-gray-50 text-xs font-bold text-gray-500 uppercase tracking-wide">
+          <div class="col-span-6">Товар</div>
+          <div class="col-span-2 text-center">Цена</div>
+          <div class="col-span-2 text-center">Количество</div>
+          <div class="col-span-2 text-right">Сумма</div>
+        </div>
+
+        <div class="overflow-y-auto custom-scroll p-4 space-y-4">
+          <!-- Item 1 -->
+          <div class="border-b border-gray-100 pb-4 last:border-0 last:pb-0">
+            <div class="grid grid-cols-12 gap-4 items-center">
+              <div class="col-span-12 md:col-span-6 flex gap-4">
+                <div class="w-20 h-24 bg-gray-100 rounded-lg overflow-hidden shrink-0 relative">
+                  <span class="absolute top-1 left-1 bg-green-500 text-white text-[9px] font-bold px-1.5 rounded">A+</span>
+                  <img alt="Платье" class="w-full h-full object-cover" src="https://page.gensparksite.com/slides_images/ed56ce986b0363e8d1267331b1c639a4.webp"/>
+                </div>
+                <div class="flex flex-col justify-center min-w-0">
+                  <p class="text-xs text-gray-400 uppercase font-bold mb-1">Next</p>
+                  <p class="font-bold text-gray-800 text-sm mb-1 leading-snug">Платье желтое летнее с воланами</p>
+                  <div class="flex flex-wrap gap-2 text-xs text-gray-500">
+                    <span class="bg-gray-100 px-1.5 py-0.5 rounded">Р-р: 104 (3-4г)</span>
+                    <span class="bg-gray-100 px-1.5 py-0.5 rounded">Цвет: Желтый</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="col-span-6 md:col-span-2 text-left md:text-center mt-3 md:mt-0">
+                <p class="font-bold text-gray-800">850 ₽</p>
+                <p class="text-xs text-gray-400 line-through">1 200 ₽</p>
+              </div>
+
+              <div class="col-span-6 md:col-span-2 flex justify-end md:justify-center mt-3 md:mt-0">
+                <div class="flex items-center border border-gray-200 rounded-lg h-8">
+                  <button class="w-7 h-full text-gray-400 hover:text-gray-600 font-bold disabled:opacity-50 text-sm">-</button>
+                  <input class="w-8 text-center text-sm font-semibold text-gray-800 bg-transparent border-none focus:ring-0 p-0" readonly type="text" value="1"/>
+                  <button class="w-7 h-full text-gray-400 hover:text-gray-600 font-bold text-sm">+</button>
+                </div>
+              </div>
+
+              <div class="col-span-12 md:col-span-2 flex flex-row md:flex-col items-center md:items-end justify-between md:justify-center mt-3 md:mt-0 gap-2">
+                <p class="font-bold text-gray-800 text-base">850 ₽</p>
+                <button class="text-xs text-gray-400 hover:text-red-500 transition flex items-center gap-1 group">
+                  <i class="far fa-trash-alt group-hover:text-red-500"></i> Удалить
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Item 2 -->
+          <div class="border-b border-gray-100 pb-4 last:border-0 last:pb-0">
+            <div class="grid grid-cols-12 gap-4 items-center">
+              <div class="col-span-12 md:col-span-6 flex gap-4">
+                <div class="w-20 h-24 bg-gray-100 rounded-lg overflow-hidden shrink-0 relative">
+                  <span class="absolute top-1 left-1 bg-brand-blue text-white text-[9px] font-bold px-1.5 rounded">A</span>
+                  <img alt="Футболка" class="w-full h-full object-cover" src="https://page.gensparksite.com/slides_images/b5b5b657ab14a248bde553b810dde2a6.webp"/>
+                </div>
+                <div class="flex flex-col justify-center min-w-0">
+                  <p class="text-xs text-gray-400 uppercase font-bold mb-1">Zara Kids</p>
+                  <p class="font-bold text-gray-800 text-sm mb-1 leading-snug">Футболка белая с принтом</p>
+                  <div class="flex flex-wrap gap-2 text-xs text-gray-500">
+                    <span class="bg-gray-100 px-1.5 py-0.5 rounded">Р-р: 110 (4-5г)</span>
+                    <span class="bg-gray-100 px-1.5 py-0.5 rounded">Цвет: Белый</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="col-span-6 md:col-span-2 text-left md:text-center mt-3 md:mt-0">
+                <p class="font-bold text-gray-800">450 ₽</p>
+                <p class="text-xs text-gray-400 line-through">800 ₽</p>
+              </div>
+
+              <div class="col-span-6 md:col-span-2 flex justify-end md:justify-center mt-3 md:mt-0">
+                <div class="flex items-center border border-gray-200 rounded-lg h-8">
+                  <button class="w-7 h-full text-gray-400 hover:text-gray-600 font-bold disabled:opacity-50 text-sm">-</button>
+                  <input class="w-8 text-center text-sm font-semibold text-gray-800 bg-transparent border-none focus:ring-0 p-0" readonly type="text" value="1"/>
+                  <button class="w-7 h-full text-gray-400 hover:text-gray-600 font-bold text-sm">+</button>
+                </div>
+              </div>
+
+              <div class="col-span-12 md:col-span-2 flex flex-row md:flex-col items-center md:items-end justify-between md:justify-center mt-3 md:mt-0 gap-2">
+                <p class="font-bold text-gray-800 text-base">450 ₽</p>
+                <button class="text-xs text-gray-400 hover:text-red-500 transition flex items-center gap-1 group">
+                  <i class="far fa-trash-alt group-hover:text-red-500"></i> Удалить
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Item 3 -->
+          <div class="border-b border-gray-100 pb-4 last:border-0 last:pb-0">
+            <div class="grid grid-cols-12 gap-4 items-center">
+              <div class="col-span-12 md:col-span-6 flex gap-4">
+                <div class="w-20 h-24 bg-gray-100 rounded-lg overflow-hidden shrink-0 relative">
+                  <span class="absolute top-1 left-1 bg-brand-red text-white text-[9px] font-bold px-1.5 rounded">-40%</span>
+                  <img alt="Кеды" class="w-full h-full object-cover" src="https://page.gensparksite.com/slides_images/1d4ad5fa102d12548ee157bd6d46bfc5.webp"/>
+                </div>
+                <div class="flex flex-col justify-center min-w-0">
+                  <p class="text-xs text-gray-400 uppercase font-bold mb-1">Adidas</p>
+                  <p class="font-bold text-gray-800 text-sm mb-1 leading-snug">Кеды детские розовые</p>
+                  <div class="flex flex-wrap gap-2 text-xs text-gray-500">
+                    <span class="bg-gray-100 px-1.5 py-0.5 rounded">Р-р: 28</span>
+                    <span class="bg-gray-100 px-1.5 py-0.5 rounded">Цвет: Розовый</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="col-span-6 md:col-span-2 text-left md:text-center mt-3 md:mt-0">
+                <p class="font-bold text-gray-800">1 500 ₽</p>
+                <p class="text-xs text-gray-400 line-through">2 500 ₽</p>
+              </div>
+
+              <div class="col-span-6 md:col-span-2 flex justify-end md:justify-center mt-3 md:mt-0">
+                <div class="flex items-center border border-gray-200 rounded-lg h-8">
+                  <button class="w-7 h-full text-gray-400 hover:text-gray-600 font-bold disabled:opacity-50 text-sm">-</button>
+                  <input class="w-8 text-center text-sm font-semibold text-gray-800 bg-transparent border-none focus:ring-0 p-0" readonly type="text" value="1"/>
+                  <button class="w-7 h-full text-gray-400 hover:text-gray-600 font-bold text-sm">+</button>
+                </div>
+              </div>
+
+              <div class="col-span-12 md:col-span-2 flex flex-row md:flex-col items-center md:items-end justify-between md:justify-center mt-3 md:mt-0 gap-2">
+                <p class="font-bold text-gray-800 text-base">1 500 ₽</p>
+                <button class="text-xs text-gray-400 hover:text-red-500 transition flex items-center gap-1 group">
+                  <i class="far fa-trash-alt group-hover:text-red-500"></i> Удалить
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-yellow-50 px-4 py-2 flex items-center gap-2 text-xs text-gray-700 mt-auto border-t border-brand-yellow/20">
+          <i class="fas fa-truck text-brand-yellow"></i>
+          <p>До бесплатной доставки осталось добавить товаров на <span class="font-bold">200 ₽</span></p>
+        </div>
+      </div>
+
+      <!-- Right Column: Summary -->
+      <div class="w-full lg:w-80 flex flex-col gap-4">
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+          <h2 class="font-bold text-lg text-gray-800 mb-4 brand-font">Итого</h2>
+          <div class="space-y-3 mb-6 pb-6 border-b border-gray-100 text-sm">
+            <div class="flex justify-between text-gray-600">
+              <span>Товары (3)</span>
+              <span>4 500 ₽</span>
+            </div>
+            <div class="flex justify-between text-brand-red font-semibold">
+              <span>Скидка</span>
+              <span>-1 700 ₽</span>
+            </div>
+            <div class="flex justify-between text-gray-600">
+              <span>Доставка</span>
+              <span class="text-xs text-gray-400 italic">Рассчитается далее</span>
+            </div>
+          </div>
+          <div class="flex justify-between items-end mb-6">
+            <span class="font-bold text-gray-800 text-lg">К оплате</span>
+            <span class="font-bold text-2xl text-brand-purple">2 800 ₽</span>
+          </div>
+          <a href="{% url 'checkout' %}" class="w-full bg-brand-yellow hover:bg-yellow-400 text-gray-900 font-bold py-3 rounded-full shadow-md transition transform hover:scale-[1.02] mb-3 flex items-center justify-center gap-2">
+            <span>Перейти к оформлению</span>
+            <i class="fas fa-arrow-right text-xs"></i>
+          </a>
+          <a href="{% url 'catalog' %}" class="w-full bg-white border border-gray-200 text-gray-600 font-bold py-3 rounded-full hover:bg-gray-50 transition text-center">
+            Продолжить покупки
+          </a>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+          <p class="font-bold text-gray-800 text-sm mb-2">Промокод</p>
+          <div class="flex gap-2">
+            <input class="flex-1 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-brand-purple" placeholder="Введите код" type="text"/>
+            <button class="bg-gray-800 text-white w-10 h-10 rounded-lg flex items-center justify-center hover:bg-gray-700 transition">
+              <i class="fas fa-check"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+{% endblock %}
+
+{% block extra_css %}
+.step-connector {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background-color: #E5E7EB;
+  z-index: 0;
+  transform: translateY(-50%);
+}
+.step-active .step-circle {
+  background-color: #C94284;
+  color: white;
+  border-color: #C94284;
+}
+.step-completed .step-circle {
+  background-color: #10B981;
+  color: white;
+  border-color: #10B981;
+}
+.step-item { position: relative; z-index: 10; }
+{% endblock %}

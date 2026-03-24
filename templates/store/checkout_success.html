@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Стильняшки - Заказ оформлен{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'css/checkout_success.css' %}">
+{% endblock %}
+
+{% block content %}
+<main class="success">
+  <div class="container">
+    <div class="success-center">
+      <section class="success-card" aria-label="Заказ оформлен">
+        <div class="success-icon" aria-hidden="true">
+          <i class="fas fa-check"></i>
+        </div>
+
+        <h1 class="success-title brand-font">Заказ оформлен</h1>
+
+        <p class="success-text">
+          Спасибо! Ваш заказ <strong>#{{ order.order_number }}</strong> принят.
+          Мы свяжемся с вами в Instagram: <strong>@{{ order.instagram }}</strong> для подтверждения.
+        </p>
+
+        <div class="success-actions">
+  <a class="success-btn success-btn--primary" href="{% url 'home' %}">
+    <i class="fas fa-home" aria-hidden="true"></i>
+    <span>На главную</span>
+  </a>
+
+  {% if request.user.is_authenticated %}
+    <a class="success-btn success-btn--ghost" href="{% url 'account_orders' %}">
+      <i class="fas fa-box-open" aria-hidden="true"></i>
+      <span>Мои заказы</span>
+    </a>
+  {% else %}
+    <a class="success-btn success-btn--ghost" href="{% url 'login' %}">
+      <i class="far fa-user" aria-hidden="true"></i>
+      <span>Войти в аккаунт</span>
+    </a>
+  {% endif %}
+</div>
+
+        <p class="success-note">
+          Оплата сейчас не подключена — после оформления мы свяжемся с вами.
+        </p>
+      </section>
+    </div>
+  </div>
+</main>
+{% endblock %}

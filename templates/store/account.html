@@ -1,55 +1,142 @@
-{% extends 'base.html' %}
-{% block title %}Мой аккаунт — Стильняшки{% endblock %}
+{% extends "store/account_base.html" %}
+{% load static %}
 
-{% block content %}
-<div class="max-w-3xl mx-auto px-4 py-8">
-  <h1 class="text-2xl font-bold mb-6">Мой аккаунт</h1>
+{% block title %}Стильняшки - Личный кабинет{% endblock %}
 
-  <div class="grid md:grid-cols-3 gap-6">
-    <!-- Profile Card -->
-    <div class="bg-white rounded-xl shadow-sm p-6 text-center">
-      <div class="w-20 h-20 rounded-full bg-gradient-to-br from-pink-400 to-purple-400 flex items-center justify-center text-white text-3xl font-bold mx-auto mb-4">
-        {{ user.username|slice:":1"|upper }}
-      </div>
-      <h2 class="font-semibold text-lg">{{ user.username }}</h2>
-      {% if user.email %}
-        <p class="text-sm text-gray-500 mt-1">{{ user.email }}</p>
-      {% endif %}
-      <p class="text-xs text-gray-400 mt-2">На сайте с {{ user.date_joined|date:"d.m.Y" }}</p>
-    </div>
+{% block nav_profile_active %}is-active{% endblock %}
+{% block account_title %}Мой профиль{% endblock %}
 
-    <!-- Account Info -->
-    <div class="md:col-span-2 space-y-4">
-      <div class="bg-white rounded-xl shadow-sm p-6">
-        <h3 class="font-semibold mb-4">Личные данные</h3>
-        <dl class="space-y-3 text-sm">
-          <div class="flex justify-between">
-            <dt class="text-gray-500">Имя пользователя:</dt>
-            <dd class="font-medium">{{ user.username }}</dd>
-          </div>
-          <div class="flex justify-between">
-            <dt class="text-gray-500">Email:</dt>
-            <dd class="font-medium">{{ user.email|default:"—" }}</dd>
-          </div>
-          <div class="flex justify-between">
-            <dt class="text-gray-500">Имя:</dt>
-            <dd class="font-medium">{{ user.first_name|default:"—" }}</dd>
-          </div>
-          <div class="flex justify-between">
-            <dt class="text-gray-500">Фамилия:</dt>
-            <dd class="font-medium">{{ user.last_name|default:"—" }}</dd>
-          </div>
-        </dl>
+{% block account_content %}
+<div class="account-grid">
+  <!-- Left -->
+  <div class="account-col account-col--main">
+    <div class="card">
+      <div class="card__head">
+        <h2 class="card__title brand-font">Личные данные</h2>
+        <a class="card__link" href="{% url 'password_reset' %}">Изменить пароль</a>
       </div>
 
-      <div class="bg-white rounded-xl shadow-sm p-6">
-        <h3 class="font-semibold mb-4">Быстрые ссылки</h3>
-        <div class="space-y-2 text-sm">
-          <a href="{% url 'catalog' %}" class="flex items-center gap-2 text-gray-700 hover:text-pink-600">→ Каталог товаров</a>
-          <a href="{% url 'cart' %}" class="flex items-center gap-2 text-gray-700 hover:text-pink-600">→ Моя корзина</a>
-          <a href="{% url 'logout' %}" class="flex items-center gap-2 text-red-500 hover:text-red-700">→ Выйти</a>
+      <form method="post" action="">
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+          <div class="form-errors" data-form-error role="alert">
+            {% for err in form.non_field_errors %}
+              <p class="form-errors__item">{{ err }}</p>
+            {% endfor %}
+          </div>
+        {% endif %}
+
+        <div class="form-grid">
+          <div class="f">
+            <p class="f__label">Имя</p>
+            <input class="f__input"
+                   type="text"
+                   name="{{ form.first_name.html_name }}"
+                   value="{{ form.first_name.value|default_if_none:'' }}"
+                   {% if form.first_name.errors %}data-has-error="1"{% endif %}>
+            {% if form.first_name.errors %}
+              <p class="f__error">{% for err in form.first_name.errors %}{{ err }}{% endfor %}</p>
+            {% endif %}
+          </div>
+
+          <div class="f">
+            <p class="f__label">Фамилия</p>
+            <input class="f__input"
+                   type="text"
+                   name="{{ form.last_name.html_name }}"
+                   value="{{ form.last_name.value|default_if_none:'' }}"
+                   {% if form.last_name.errors %}data-has-error="1"{% endif %}>
+            {% if form.last_name.errors %}
+              <p class="f__error">{% for err in form.last_name.errors %}{{ err }}{% endfor %}</p>
+            {% endif %}
+          </div>
+
+          <div class="f">
+            <p class="f__label">Телефон</p>
+            <input class="f__input"
+                   type="text"
+                   name="{{ form.phone.html_name }}"
+                   value="{{ form.phone.value|default_if_none:'' }}"
+                   placeholder="+375 (29) 123-45-67"
+                   {% if form.phone.errors %}data-has-error="1"{% endif %}>
+            {% if form.phone.errors %}
+              <p class="f__error">{% for err in form.phone.errors %}{{ err }}{% endfor %}</p>
+            {% endif %}
+          </div>
+
+          <div class="f">
+            <p class="f__label">E-mail</p>
+            <input class="f__input"
+                   type="email"
+                   name="{{ form.email.html_name }}"
+                   value="{{ form.email.value|default_if_none:'' }}"
+                   {% if form.email.errors %}data-has-error="1"{% endif %}>
+            {% if form.email.errors %}
+              <p class="f__error">{% for err in form.email.errors %}{{ err }}{% endfor %}</p>
+            {% endif %}
+          </div>
+
+          <div class="f f--wide">
+            <p class="f__label">Город</p>
+            <div class="f__with-icon">
+              <input class="f__input"
+                     type="text"
+                     name="{{ form.city.html_name }}"
+                     value="{{ form.city.value|default_if_none:'' }}"
+                     placeholder="Минск"
+                     {% if form.city.errors %}data-has-error="1"{% endif %}>
+              <i class="fas fa-map-marker-alt f__icon" aria-hidden="true"></i>
+            </div>
+            {% if form.city.errors %}
+              <p class="f__error">{% for err in form.city.errors %}{{ err }}{% endfor %}</p>
+            {% endif %}
+          </div>
+
+          <div class="f">
+            <p class="f__label">Instagram</p>
+            <input class="f__input"
+                   type="text"
+                   name="{{ form.instagram_username.html_name }}"
+                   value="{{ form.instagram_username.value|default_if_none:'' }}"
+                   placeholder="@username"
+                   {% if form.instagram_username.errors %}data-has-error="1"{% endif %}>
+            {% if form.instagram_username.errors %}
+              <p class="f__error">{% for err in form.instagram_username.errors %}{{ err }}{% endfor %}</p>
+            {% endif %}
+          </div>
+
+          <div class="f">
+            <p class="f__label">Логин (username)</p>
+            <input class="f__input"
+                   type="text"
+                   name="{{ form.username.html_name }}"
+                   value="{{ form.username.value|default_if_none:'' }}"
+                   {% if form.username.errors %}data-has-error="1"{% endif %}>
+            {% if form.username.errors %}
+              <p class="f__error">{% for err in form.username.errors %}{{ err }}{% endfor %}</p>
+            {% endif %}
+          </div>
         </div>
+
+        <div class="card__actions">
+          <button class="btn btn--yellow" type="submit">Сохранить изменения</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Right -->
+  <div class="account-col account-col--side">
+    <div class="card">
+      <div class="card__head">
+        <h2 class="card__title brand-font">Адреса</h2>
+        <a class="card__link" href="{% url 'account_addresses' %}">Открыть</a>
       </div>
+
+      <p style="margin:0;color:#6b7280;font-weight:700;font-size:13px;">
+        Здесь можно сохранить почтовый адрес и адрес Европочты.
+      </p>
     </div>
   </div>
 </div>

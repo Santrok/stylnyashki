@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Стильняшки - Товар недоступен{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'css/checkout_success.css' %}">
+{% endblock %}
+
+{% block content %}
+<main class="success">
+  <div class="container">
+    <div class="success-center">
+      <section class="success-card" aria-label="Товар недоступен">
+        <div class="success-icon success-icon--warn" aria-hidden="true">
+          <i class="fas fa-clock"></i>
+        </div>
+
+        <h1 class="success-title brand-font">Упс, товар недоступен</h1>
+
+        <p class="success-text">
+          К сожалению, один или несколько товаров уже находятся в резерве или были куплены.
+            Мы обновили доступность товаров в вашей корзине.
+        </p>
+
+          {% if products %}
+        <div class="unav-list">
+          {% for p in products %}
+            <div class="unav-item">
+              <div class="unav-img">
+                {% if p.image %}
+                  <img src="{{ p.image.url }}" alt="{{ p.name }}">
+                {% endif %}
+              </div>
+              <div class="unav-meta">
+                <div class="unav-name">{{ p.name }}</div>
+                <div class="unav-status">
+                  {% if p.status == "sold" %}Продано{% else %}В резерве{% endif %}
+                </div>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+
+        <div class="success-actions">
+        <a class="success-btn success-btn--primary" href="{% url 'cart' %}">
+          <i class="fas fa-shopping-cart" aria-hidden="true"></i>
+          <span>В корзину</span>
+        </a>
+        <a class="success-btn success-btn--ghost" href="{% url 'catalog' %}">
+          <i class="fas fa-th-large" aria-hidden="true"></i>
+          <span>В каталог</span>
+        </a>
+      </div>
+
+      </section>
+    </div>
+  </div>
+</main>
+{% endblock %}

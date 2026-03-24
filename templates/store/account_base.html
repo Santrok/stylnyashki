@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'css/account.css' %}">
+{% block extra_head_double %}
+{% endblock %}
+{% endblock %}
+
+{% block content %}
+<main class="account">
+  <div class="container">
+    <div class="account-shell">
+      <!-- Sidebar -->
+      <aside id="desktopSidebar" class="account-sidebar" aria-label="Меню кабинета">
+        <nav class="account-nav">
+          <a class="account-nav__item {% block nav_profile_active %}{% endblock %}" href="{% url 'account' %}">
+            <i class="fas fa-id-card account-nav__icon" aria-hidden="true"></i>
+            <span>Мой профиль</span>
+          </a>
+
+          <a class="account-nav__item {% block nav_addresses_active %}{% endblock %}" href="{% url 'account_addresses' %}">
+            <i class="fas fa-map-marker-alt account-nav__icon" aria-hidden="true"></i>
+            <span>Адреса</span>
+          </a>
+
+          <a class="account-nav__item {% block nav_orders_active %}{% endblock %}" href="{% url 'account_orders' %}">
+            <i class="fas fa-box-open account-nav__icon" aria-hidden="true"></i>
+            <span>Мои заказы</span>
+          </a>
+
+          <a class="account-nav__item {% block nav_fav_active %}{% endblock %}" href="#">
+            <i class="far fa-heart account-nav__icon" aria-hidden="true"></i>
+            <span>Избранное</span>
+          </a>
+
+          <a class="account-nav__item {% block nav_kids_active %}{% endblock %}" href="#">
+            <i class="fas fa-child account-nav__icon" aria-hidden="true"></i>
+            <span>Мои дети</span>
+          </a>
+
+          <a class="account-nav__item {% block nav_settings_active %}{% endblock %}" href="#">
+            <i class="fas fa-cog account-nav__icon" aria-hidden="true"></i>
+            <span>Настройки</span>
+          </a>
+        </nav>
+
+        <div class="account-sidebar__foot">
+          <a href="{% url 'logout' %}" class="account-logout">
+            <i class="fas fa-sign-out-alt" aria-hidden="true"></i>
+            <span>Выйти</span>
+          </a>
+        </div>
+      </aside>
+
+      <!-- Content -->
+      <section class="account-main">
+        <header class="account-topbar">
+          <div class="account-topbar__left">
+            <button id="accountNavOpenBtn"
+                    class="account-burger"
+                    type="button"
+                    aria-label="Открыть меню кабинета">
+              <i class="fas fa-bars"></i>
+            </button>
+            <h1 class="account-topbar__title brand-font">{% block account_title %}{% endblock %}</h1>
+          </div>
+        </header>
+
+        <div class="account-scroll custom-scroll">
+          {% block account_content %}{% endblock %}
+        </div>
+      </section>
+    </div>
+  </div>
+</main>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/form_errors_autoclear.js' %}" defer></script>
+{% endblock %}

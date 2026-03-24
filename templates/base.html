@@ -1,34 +1,133 @@
-{% load static %}
 <!DOCTYPE html>
+{% load static %}
 <html lang="ru">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="utf-8"/>
+  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
   <title>{% block title %}Стильняшки{% endblock %}</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Fonts + icons (no Tailwind) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Comfortaa:wght@400;600;700&family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
+
+  <!-- Global styles -->
   <link rel="stylesheet" href="{% static 'css/style.css' %}" />
+
+  {# Page-specific css #}
   {% block extra_head %}{% endblock %}
 </head>
-<body class="bg-gray-50 text-gray-900 min-h-screen flex flex-col">
+<body class="site {% block body_class %}{% endblock %}">
 
-  {% include 'partials/header.html' %}
-  {% include 'partials/mobile_menu.html' %}
+  {% include "partials/mobile_menu.html" %}
 
-  <main class="flex-1">
-    {% if messages %}
-      <div class="max-w-7xl mx-auto px-4 pt-4">
-        {% for message in messages %}
-          <div class="mb-2 px-4 py-3 rounded {% if message.tags == 'error' %}bg-red-100 text-red-700{% else %}bg-green-100 text-green-700{% endif %}">
-            {{ message }}
-          </div>
-        {% endfor %}
-      </div>
-    {% endif %}
+  {% block site_header %}
+    {% include "partials/header.html" %}
+  {% endblock %}
+
+  <main class="site__main">
     {% block content %}{% endblock %}
   </main>
 
-  {% include 'partials/footer.html' %}
+  {% block site_footer %}
+    {% include "partials/footer.html" %}
+  {% endblock %}
+  <div id="productModal" class="p-modal" aria-hidden="true">
+  <div class="p-modal__backdrop" data-close="1"></div>
 
+  <div class="p-modal__panel" role="dialog" aria-modal="true" aria-label="Товар">
+    <button class="p-modal__close" type="button" aria-label="Закрыть" data-close="1">
+      <i class="fas fa-times"></i>
+    </button>
+
+    <div class="p-modal__body">
+      <div class="p-modal__img">
+        <img id="pmImg" alt="">
+      </div>
+
+      <div class="p-modal__info">
+        <p id="pmBrand" class="p-modal__brand"></p>
+        <h3 id="pmName" class="p-modal__name"></h3>
+
+        <div id="pmSizes" class="p-modal__sizes"></div>
+
+        <div class="p-modal__prices">
+          <span id="pmPriceOld" class="p-modal__price-old by-currency-old"></span>
+          <span id="pmPrice" class="p-modal__price by-currency"></span>
+        </div>
+
+        <div class="p-modal__actions">
+  <button id="pmCartBtn"
+          class="p-modal__btn p-modal__btn--primary"
+          type="button"
+          data-action="toggle-cart"
+          data-product-id=""
+          data-no-open="1">
+    <i class="fas fa-shopping-basket"></i>
+    <span id="pmCartText">В корзину</span>
+  </button>
+
+  <button id="pmFavBtn"
+          class="p-modal__btn"
+          type="button"
+          data-action="toggle-favorite"
+          data-product-id=""
+          data-no-open="1">
+    <i class="far fa-heart"></i>
+    В избранное
+  </button>
+</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+  <script>
+    (function () {
+      const overlay = document.getElementById('mobileMenu');
+      const openBtn = document.getElementById('menuOpenBtn');
+      const closeBtn = document.getElementById('menuCloseBtn');
+
+      function openMenu() {
+        if (!overlay) return;
+        overlay.classList.add('is-open');
+        overlay.setAttribute('aria-hidden', 'false');
+        if (openBtn) openBtn.setAttribute('aria-expanded', 'true');
+        document.body.classList.add('menu-open');
+      }
+
+      function closeMenu() {
+        if (!overlay) return;
+        overlay.classList.remove('is-open');
+        overlay.setAttribute('aria-hidden', 'true');
+        if (openBtn) openBtn.setAttribute('aria-expanded', 'false');
+        document.body.classList.remove('menu-open');
+      }
+
+      openBtn && openBtn.addEventListener('click', openMenu);
+      closeBtn && closeBtn.addEventListener('click', closeMenu);
+
+      overlay && overlay.addEventListener('click', function (e) {
+        if (e.target === overlay) closeMenu();
+      });
+
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') closeMenu();
+      });
+
+      if (overlay) {
+        const links = overlay.querySelectorAll('[data-close-menu]');
+        links.forEach(function (a) {
+          a.addEventListener('click', function () {
+            closeMenu();
+          });
+        });
+      }
+    })();
+  </script>
+  <script src="{% static '/js/shop.js' %}"></script>
+  <script src="{% static '/js/product_fullscreen_modal.js' %}"></script>
   {% block extra_js %}{% endblock %}
 </body>
 </html>
