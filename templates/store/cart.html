@@ -30,7 +30,7 @@
 
           <div class="step-item">
             <div class="step-circle step-circle--inactive">2</div>
-            <p class="step-label step-label--inactive">Оформление</p>
+            <p class="step-label step-label--inactive">Офо��мление</p>
           </div>
 
           <div class="step-item">
@@ -41,13 +41,13 @@
       </div>
 
       <!-- Cart Layout -->
-      <div class="cart-layout">
+      <!-- Обёртка формы GET: при сабмите переход на /checkout?selected_items=... -->
+      <form id="cart-select-form" method="get" action="{% url 'checkout' %}" class="cart-layout" novalidate>
         <!-- Left Column: Items List -->
         <section class="cart-list">
           <div class="cart-list__head">
             <div class="cart-head-grid">
               <div class="cart-head-grid__col cart-head-grid__col--product">Товар</div>
-              <div class="cart-head-grid__col cart-head-grid__col--price">Цена</div>
               <div class="cart-head-grid__col cart-head-grid__col--sum">Сумма</div>
             </div>
           </div>
@@ -56,12 +56,25 @@
             {% if items %}
               <div class="cart-items">
                 {% for item in items %}
-                  <article class="cart-item {% if item.availability != 'available' %}cart-item--muted{% endif %}"
-                           data-cart-item
-                           data-item-id="{{ item.id }}"
-                           data-availability="{{ item.availability }}">
+                  <article
+                    class="cart-item {% if item.availability != 'available' %}cart-item--muted{% endif %}"
+                    data-cart-item
+                    data-item-id="{{ item.id }}"
+                    data-availability="{{ item.availability }}"
+                    data-quantity="{{ item.quantity }}">
                     <div class="cart-item__grid cart-item__grid--noqty">
                       <!-- product -->
+                        <div class="cart-item__select" aria-hidden="false">
+                          <label class="cart-item__select-label">
+                            <input
+                              class="cart-item__checkbox"
+                              type="checkbox"
+                              name="selected_items"
+                              value="{{ item.id }}"
+                              {% if item.availability == "available" %}checked{% else %}disabled{% endif %}>
+
+                          </label>
+                        </div>
                       {% if item.availability == "available" %}
                         <button class="cart-item__product cart-item__open"
                                 type="button"
@@ -78,6 +91,9 @@
                         <div class="cart-item__product cart-item__open cart-item__open--disabled"
                              aria-disabled="true">
                       {% endif %}
+
+
+
                           <div class="cart-item__img">
                             {% if item.product.discount %}
                               <span class="cart-item__badge bg-brand-red">-{{ item.product.discount }}%</span>
@@ -118,19 +134,17 @@
                         </div>
                       {% endif %}
 
-                      <!-- price -->
-                      <div class="cart-item__price">
-                        <p class="price-now">{{ item.product.discounted_price|floatformat:0 }} <span class="by-currency">ƃ</span></p>
-                        {% if item.product.discount %}
-                          <p class="price-old">{{ item.product.price|floatformat:0 }} <span class="by-currency-old">ƃ</span></p>
-                        {% endif %}
-                      </div>
 
                       <!-- sum + remove -->
                       <div class="cart-item__sum">
                         {% if item.availability == "available" %}
-                          <p class="sum-val" data-subtotal>{{ item.subtotal|floatformat:0 }} <span class="by-currency">ƃ</span></p>
-                        {% else %}
+                          <div class="cart-item__price">
+                          {% if item.product.discount %}
+                          <p class="price-old">{{ item.product.price|floatformat:0 }} <span class="by-currency-old">ƃ</span></p>
+                        {% endif %}
+                          <p class="sum-val" data-subtotal="{{ item.subtotal|floatformat:0 }}">{{ item.subtotal|floatformat:0 }} <span class="by-currency">ƃ</span></p>
+                          </div>
+                              {% else %}
                           <p class="sum-val sum-val--muted">—</p>
                         {% endif %}
 
@@ -189,27 +203,22 @@
               </span>
             </div>
 
-            {% if total_qty|default:0 > 0 %}
-              <a class="btn btn--yellow btn--wide" href="{% url 'checkout' %}">
-                <span>Перейти к оформлению</span>
-                <i class="fas fa-arrow-right"></i>
-              </a>
-            {% else %}
-              <button class="btn btn--yellow btn--wide btn--disabled" type="button" disabled>
+            <div style="margin-top:12px;">
+              <button id="cartGoCheckoutBtn" class="btn btn--yellow btn--wide" type="submit">
                 <span>Перейти к оформлению</span>
                 <i class="fas fa-arrow-right"></i>
               </button>
-
-              {% if items %}
-                <p class="summary__hint">
-                  В корзине нет доступных товаров для оформления. Недоступные товары отмечены серым.
-                </p>
-              {% endif %}
-            {% endif %}
+            </div>
 
             <a class="btn btn--ghost btn--wide" href="{% url 'catalog' %}">
               Продолжить покупки
             </a>
+
+            {% if items and total_qty|default:0 == 0 %}
+              <p class="summary__hint" style="margin-top:10px;">
+                В корзине нет доступных товаров для оформления. Недоступные товары отмечены серым.
+              </p>
+            {% endif %}
           </section>
 
           <section class="promo">
@@ -222,7 +231,8 @@
             </div>
           </section>
         </aside>
-      </div>
+      </form>
+      <!-- /.cart-layout -->
     </div>
   </main>
 </div>
@@ -239,4 +249,5 @@
 
 {% block extra_js %}
 <script src="{% static 'js/cart.js' %}" defer></script>
+<script src="{% static 'js/cart-select.js' %}" defer></script>
 {% endblock %}

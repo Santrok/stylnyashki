@@ -172,19 +172,62 @@ def cart_page(request):
 def checkout_view(request):
     cart = get_or_create_cart(request)
 
-    # На checkout оформляем ТОЛЬКО доступные позиции текущей корзины
-    items = (
-        cart.items
-        .select_related("product", "size")
-        .filter(availability=CartItem.Availability.AVAILABLE)
-        .all()
-    )
+    # Все позиции корзины (используется для валидаций / fallback)
+    all_cart_items_qs = cart.items.select_related("product", "size").all()
 
+    # Количество недоступных позиций в корзине (для показа подсказки)
+    unavailable_count = all_cart_items_qs.exclude(
+        availability=CartItem.Availability.AVAILABLE
+    ).count()
+
+    # Получаем список выбранных item-id (пришел из GET при переходе с корзины или из POST при финальном сабмите)
+    # selected_ids = []
+    # if request.method == "POST":
+    #     selected_ids = request.POST.getlist("selected_items")
+    # else:
+    #     # GET
+    #     selected_ids = request.GET.getlist("selected_items")
+    selected_ids = request.GET.getlist("selected_items")
+
+    # Нормализуем selected_ids -> ints (безопасно)
+    try:
+        selected_ids = [int(x) for x in selected_ids if x is not None and str(x).strip() != ""]
+    except ValueError:
+        selected_ids = []
+
+    # Если есть выбранные id, используем их; иначе — все доступные позиции
+    if selected_ids:
+        # Только строки корзины, принадлежащие этой корзине
+        selected_items_qs = cart.items.select_related("product", "size").filter(id__in=selected_ids)
+        # Если ничего не найдено — перенаправляем на корзину с сообщением
+        if not selected_items_qs.exists():
+            messages.error(request, "Выбранные позиции не найдены в корзине.")
+            return redirect("cart")
+
+        # Если среди выбранных есть недоступные по availability — редиректим на страницу unavailable
+        not_available_selected = selected_items_qs.exclude(availability=CartItem.Availability.AVAILABLE)
+        print(not_available_selected)
+
+        if not_available_selected.exists():
+            # пометим их RESERVED в корзинах и положим их product ids в сессию
+            bad_product_ids = list(not_available_selected.values_list("product_id", flat=True))
+            CartItem.objects.filter(product_id__in=bad_product_ids).update(
+                availability=CartItem.Availability.RESERVED
+            )
+            request.session["checkout_unavailable_product_ids"] = bad_product_ids
+            return redirect("checkout_unavailable")
+
+        items_qs = selected_items_qs
+    else:
+        # No explicit selection — use ALL available items
+        items_qs = cart.items.select_related("product", "size").filter(
+            availability=CartItem.Availability.AVAILABLE
+        )
+
+    # Precompute totals from items_qs (these are the items we will attempt to checkout)
+    items = list(items_qs)  # convert to list for iteration later
     total_qty = sum(i.quantity for i in items)
     total_sum = sum(i.subtotal for i in items)
-
-    # сколько недоступных позиций есть в корзине (для предупреждения)
-    unavailable_count = cart.items.exclude(availability=CartItem.Availability.AVAILABLE).count()
 
     user = request.user if request.user.is_authenticated else None
     profile = getattr(user, "profile", None) if user else None
@@ -238,13 +281,12 @@ def checkout_view(request):
 
         return initial
 
+    # Если POST — final submit
     if request.method == "POST":
         form = CheckoutForm(request.POST)
 
-        if unavailable_count:
-            return redirect("checkout_unavailable")
 
-        # нечего оформлять
+        # Нечего оформлять
         if not items:
             if unavailable_count > 0:
                 messages.error(request, "В корзине нет доступных товаров для оформления. Недоступные товары отмечены серым.")
@@ -255,37 +297,35 @@ def checkout_view(request):
         if form.is_valid():
             cd = form.cleaned_data
             delivery_price = Decimal("0.00")
-            product_ids = list(items.values_list("product_id", flat=True))
+            # products to lock: только те, которые принадлежали выбранным cart items
+            product_ids = list({ci.product_id for ci in items})
 
             with transaction.atomic():
                 now = timezone.now()
                 reserve_until = now + timedelta(minutes=getattr(settings, "RESERVE_TTL_MINUTES", 60))
 
-                # блокируем товары, которые пытаемся зарезервировать
+                # блокируем соответствующие продукты
                 locked_products = (
                     Product.objects
                     .select_for_update()
                     .filter(id__in=product_ids)
                 )
 
-                # если есть хоть один недоступный (reserved/sold/неактивные) — стоп оформления
-                unavailable = locked_products.filter(
+                # проверяем, не стали ли продукты RESERVED/SOLD/неактивны за время между показом и сабмитом
+                unavailable_products_qs = locked_products.filter(
                     Q(status__in=[Product.Status.RESERVED, Product.Status.SOLD]) | Q(is_active=False)
                 )
-                print(unavailable, 'недоступные товары')
-                if unavailable.exists():
-                    bad_ids = list(unavailable.values_list("id", flat=True))
-                    # отмечаем их серым у всех пользователей (и у себя тоже)
+                if unavailable_products_qs.exists():
+                    bad_ids = list(unavailable_products_qs.values_list("id", flat=True))
+                    # отмечаем их серым у всех пользователей
                     CartItem.objects.filter(product_id__in=bad_ids).update(
                         availability=CartItem.Availability.RESERVED
                     )
                     # передаём их ids в сессию для страницы недоступности
                     request.session["checkout_unavailable_product_ids"] = bad_ids
-                    # редиректим (НЕ создаём заказ — оформление ОСТАНАВЛИВАЕМ сразу)
-                    print("здесь должен был быть редирект")
                     return redirect("checkout_unavailable")
 
-                # если все доступны — оформляем заказ как раньше
+                # Все необходимые продукты доступны — создаём заказ
                 order = Order.objects.create(
                     user=user if user else None,
                     status=Order.Status.NEW,
@@ -293,9 +333,9 @@ def checkout_view(request):
 
                     first_name=cd["first_name"],
                     last_name=cd["last_name"],
-                    middle_name=cd["middle_name"],
+                    middle_name=cd.get("middle_name", ""),
                     phone=cd["phone"],
-                    instagram=cd["instagram"],
+                    instagram=cd.get("instagram", ""),
 
                     postal_index=cd.get("postal_index", "") if cd["delivery_type"] == Order.DeliveryType.POST else "",
                     city=cd.get("city", "") if cd["delivery_type"] == Order.DeliveryType.POST else "",
@@ -309,6 +349,7 @@ def checkout_view(request):
                     delivery_price=delivery_price,
                 )
 
+                # создаём OrderItem'ы только для выбранных cart items
                 OrderItem.objects.bulk_create([
                     OrderItem(
                         order=order,
@@ -321,17 +362,22 @@ def checkout_view(request):
                     for ci in items
                 ])
 
-                # резервируем товары (они пропадают из выдачи, т.к. выдача = только AVAILABLE)
+                # резервируем продукты (меняем статус)
                 locked_products.update(status=Product.Status.RESERVED, reserved_until=reserve_until)
 
-                # во всех корзинах помечаем эти товары серым RESERVED
+                # Во всех корзинах помечаем эти товары серым RESERVED
                 CartItem.objects.filter(product_id__in=product_ids).update(
                     availability=CartItem.Availability.RESERVED
                 )
 
-                # у текущего пользователя удаляем эти позиции из корзины (как договорились)
-                cart.items.filter(product_id__in=product_ids).delete()
+                # Удаляем выбранные позиции из текущей корзины
+                if selected_ids:
+                    cart.items.filter(id__in=selected_ids).delete()
+                else:
+                    # если selected_ids не было — удаляем все позиции, которые мы оформили (по product_ids)
+                    cart.items.filter(product_id__in=product_ids).delete()
 
+                # Пересчёт итогов заказа (если у тебя есть метод)
                 order.recalc_totals(save=True)
 
             return redirect("checkout_success", public_id=order.public_id)
@@ -341,15 +387,19 @@ def checkout_view(request):
     delivery_price = Decimal("0.00")
     total_with_delivery = total_sum + delivery_price
 
+    # Передаём в шаблон selected_item_ids чтобы шаблон мог вставить скрытые поля для POST
+    selected_item_ids = selected_ids
+
     return render(request, "store/checkout.html", {
         "form": form,
         "cart": cart,
-        "items": items,  # только доступные позиции
+        "items": items,  # выбранные (или все доступные) позиции для оформления
         "unavailable_count": unavailable_count,
         "total_qty": total_qty,
         "total_sum": total_sum,
         "delivery_price": delivery_price,
         "total_with_delivery": total_with_delivery,
+        "selected_item_ids": selected_item_ids,
     })
 
 
