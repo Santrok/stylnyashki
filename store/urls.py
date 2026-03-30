@@ -27,8 +27,10 @@ urlpatterns = [
     path('account/', views.account_view, name='account'),
     path("account/addresses/", views.account_addresses_view, name="account_addresses"),
     path("account/account_orders/", views.account_orders_view, name="account_orders"),
-path('account/orders/<uuid:public_id>/', views.account_order_detail_view, name='account_order_detail'),
-
+    path('account/orders/<uuid:public_id>/', views.account_order_detail_view, name='account_order_detail'),
+    path('account/favorites/', views.account_favorites_view, name='account_favorites'),
+    path('account/favorites/remove/<int:item_id>/', views.favorite_remove_view, name='favorite_remove'),
+    path('account/favorites/add-to-cart/<int:item_id>/', views.favorite_add_to_cart_view, name='favorite_add_to_cart'),
 
     # Cart actions
     path('cart/add/<int:product_id>/', views.cart_add, name='cart_add'),

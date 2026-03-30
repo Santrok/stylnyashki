@@ -97,6 +97,7 @@ img{ max-width:100%; display:block; }
   align-items:center;
   justify-content:space-between;
   gap:12px;
+    padding: 30px 16px;
 }
 
 /* logo */
@@ -334,6 +335,12 @@ body.menu-open{ overflow:hidden; }
     font-family: 'wbCurrency';
   font-weight: 900;
   font-size: 24px;
+}
+
+.by-currency-buble {
+    font-family: 'wbCurrency';
+  font-weight: 900;
+  font-size: 18px;
 }
 
 .by-currency-old {

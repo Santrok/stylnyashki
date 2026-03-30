@@ -57,7 +57,7 @@
               <div class="cart-items">
                 {% for item in items %}
                   <article
-                    class="cart-item {% if item.availability != 'available' %}cart-item--muted{% endif %}"
+                    class="cart-item {% if item.availability != 'available' or item.product.status != 'available' %}cart-item--muted{% endif %}"
                     data-cart-item
                     data-item-id="{{ item.id }}"
                     data-availability="{{ item.availability }}"
@@ -71,11 +71,11 @@
                               type="checkbox"
                               name="selected_items"
                               value="{{ item.id }}"
-                              {% if item.availability == "available" %}checked{% else %}disabled{% endif %}>
+                              {% if item.availability == "available" and item.product.status == 'available' %}checked{% else %}disabled{% endif %}>
 
                           </label>
                         </div>
-                      {% if item.availability == "available" %}
+                      {% if item.availability == "available" and item.product.status == 'available' %}
                         <button class="cart-item__product cart-item__open"
                                 type="button"
                                 data-action="open-product-modal"
@@ -99,9 +99,10 @@
                               <span class="cart-item__badge bg-brand-red">-{{ item.product.discount }}%</span>
                             {% endif %}
 
-                            {% if item.availability != "available" %}
+                            {% if item.availability != "available" or item.product.status != 'available' %}
                               <span class="cart-item__status-badge">
-                                {% if item.availability == "reserved" %}В резерве{% else %}Продано{% endif %}
+                                  Недоступно
+
                               </span>
                             {% endif %}
 
@@ -123,12 +124,12 @@
                                 <span class="pill">Р-р: {{ item.size }}</span>
                               {% endif %}
 
-                              {% if item.availability != "available" %}
+                              {% if item.availability != "available" or item.product.status != 'available' %}
                                 <span class="pill pill--muted">Не входит в сумму</span>
                               {% endif %}
                             </div>
                           </div>
-                      {% if item.availability == "available" %}
+                      {% if item.availability == "available" and item.product.status == 'available' %}
                         </button>
                       {% else %}
                         </div>
@@ -137,7 +138,7 @@
 
                       <!-- sum + remove -->
                       <div class="cart-item__sum">
-                        {% if item.availability == "available" %}
+                        {% if item.availability == "available" and item.product.status == 'available' %}
                           <div class="cart-item__price">
                           {% if item.product.discount %}
                           <p class="price-old">{{ item.product.price|floatformat:0 }} <span class="by-currency-old">ƃ</span></p>

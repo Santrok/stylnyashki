@@ -1,0 +1,142 @@
+{% extends "store/account_base.html" %}
+{% load static %}
+
+{% block title %}Стильняшки — Избранное{% endblock %}
+
+{% block extra_head_double %}
+<link rel="stylesheet" href="{% static 'css/account_favorites.css' %}">
+{% endblock %}
+
+{% block nav_fav_active %}is-active{% endblock %}
+{% block account_title %}Избранное{% endblock %}
+
+{% block account_content %}
+<div class="card fav-page-card">
+  <div class="card__head">
+    <h2 class="card__title brand-font">Избранное</h2>
+  </div>
+
+  {% if items_page and items_page.object_list %}
+    <div class="favorites-grid">
+      {% for fi in items_page.object_list %}
+        {% with product=fi.product %}
+          {% if not product.is_active or product.status == product.Status.SOLD or product.status == product.Status.RESERVED %}
+            <div class="fav-card fav-card--muted fav-card--disabled">
+              <div class="fav-card__img" style="position:relative;">
+                {% if product.image %}
+                  <img src="{{ product.image.url }}" alt="{{ product.name }}">
+                {% else %}
+                  <img src="{% static 'img/placeholder.png' %}" alt="">
+                {% endif %}
+                <span class="fav-card__status">Недоступно</span>
+              </div>
+
+              <div class="fav-card__meta">
+                <div class="fav-card__name">{{ product.name }}</div>
+
+                {# Размер: приоритет fi.size -> product.size -> product.default_size #}
+                {% if fi.size %}
+                  <div class="fav-card__size">Р-р: {{ fi.size }}</div>
+                {% elif product.size %}
+                  <div class="fav-card__size">Р-р: {{ product.size }}</div>
+                {% elif product.default_size %}
+                  <div class="fav-card__size">Р-р: {{ product.default_size }}</div>
+                {% endif %}
+
+                <div class="fav-card__price">
+                  {% if product.discounted_price %}
+                    {{ product.discounted_price|floatformat:0 }} <span class="by-currency">ƃ</span>
+                  {% else %}
+                    {{ product.price|default:"0.00"|floatformat:0 }} <span class="by-currency">ƃ</span>
+                  {% endif %}
+                </div>
+
+                <div class="fav-card__actions">
+                  <form method="post" action="{% url 'favorite_add_to_cart' fi.id %}" style="display:inline;">
+                    {% csrf_token %}
+                    <button
+                      type="submit"
+                      class="btn btn--yellow btn--sm btn--disabled"
+                      disabled aria-disabled="true">
+                      В корзину
+                    </button>
+                  </form>
+
+                  <form method="post" action="{% url 'favorite_remove' fi.id %}" style="display:inline;" class="fav-remove-form">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn--ghost btn--sm">Удалить</button>
+                  </form>
+                </div>
+              </div>
+            </div>
+          {% else %}
+            <div class="fav-card">
+              <div class="fav-card__img">
+                {% if product.image %}
+                  <img src="{{ product.image.url }}" alt="{{ product.name }}">
+                {% else %}
+                  <img src="{% static 'img/placeholder.png' %}" alt="">
+                {% endif %}
+              </div>
+
+              <div class="fav-card__meta">
+                <div class="fav-card__name">{{ product.name }}</div>
+
+                {# Размер: приоритет fi.size -> product.size -> product.default_size #}
+                {% if fi.size %}
+                  <div class="fav-card__size">Р-р: {{ fi.size }}</div>
+                {% elif product.size %}
+                  <div class="fav-card__size">Р-р: {{ product.size }}</div>
+                {% elif product.default_size %}
+                  <div class="fav-card__size">Р-р: {{ product.default_size }}</div>
+                {% endif %}
+
+                <div class="fav-card__price">
+                  {% if product.discounted_price %}
+                    {{ product.discounted_price|floatformat:0 }} <span class="by-currency">ƃ</span>
+                  {% else %}
+                    {{ product.price|default:"0.00"|floatformat:0 }} <span class="by-currency">ƃ</span>
+                  {% endif %}
+                </div>
+
+                <div class="fav-card__actions">
+                  <form method="post" action="{% url 'favorite_add_to_cart' fi.id %}" style="display:inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn--yellow btn--sm">В корзину</button>
+                  </form>
+
+                  <form method="post" action="{% url 'favorite_remove' fi.id %}" style="display:inline;" class="fav-remove-form">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn--ghost btn--sm">Удалить</button>
+                  </form>
+                </div>
+              </div>
+            </div>
+          {% endif %}
+        {% endwith %}
+      {% endfor %}
+    </div>
+
+    <div class="pagination" style="margin-top:14px;">
+      {% if items_page.has_previous %}
+        <a class="card__link" href="?page={{ items_page.previous_page_number }}">← Назад</a>
+      {% endif %}
+      <span class="page-indicator">Страница {{ items_page.number }} из {{ items_page.paginator.num_pages }}</span>
+      {% if items_page.has_next %}
+        <a class="card__link" href="?page={{ items_page.next_page_number }}">Далее →</a>
+      {% endif %}
+    </div>
+
+  {% else %}
+    <div class="card" style="padding:24px;">
+      <h3 style="margin:0 0 8px;">Пока нет избранных</h3>
+      <p style="margin:0;color:#6b7280;font-weight:700;">Добавьте товары в избранное, чтобы быстро найти их позже.</p>
+      <a class="btn btn--yellow" href="{% url 'catalog' %}" style="margin-top:12px; display:inline-block;">Перейти в каталог</a>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js_double %}
+<script src="{% static 'js/favorites.js' %}" defer></script>
+{% endblock %}

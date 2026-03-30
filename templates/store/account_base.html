@@ -11,8 +11,13 @@
 <main class="account">
   <div class="container">
     <div class="account-shell">
-      <!-- Sidebar -->
-      <aside id="desktopSidebar" class="account-sidebar" aria-label="Меню кабинета">
+      <!-- Sidebar (используем именно этот aside как источник меню) -->
+      <aside id="accountSidebar" class="account-sidebar" aria-label="Меню кабинета" aria-hidden="true">
+        <!-- Close button for mobile (внутри aside) -->
+        <button id="accountNavCloseBtn" class="account-nav__close" type="button" aria-label="Закрыть меню">
+          <i class="fas fa-times" aria-hidden="true"></i>
+        </button>
+
         <nav class="account-nav">
           <a class="account-nav__item {% block nav_profile_active %}{% endblock %}" href="{% url 'account' %}">
             <i class="fas fa-id-card account-nav__icon" aria-hidden="true"></i>
@@ -29,7 +34,7 @@
             <span>Мои заказы</span>
           </a>
 
-          <a class="account-nav__item {% block nav_fav_active %}{% endblock %}" href="#">
+          <a class="account-nav__item {% block nav_fav_active %}{% endblock %}" href="{% url 'account_favorites' %}">
             <i class="far fa-heart account-nav__icon" aria-hidden="true"></i>
             <span>Избранное</span>
           </a>
@@ -53,6 +58,9 @@
         </div>
       </aside>
 
+      <!-- overlay for mobile — управляется классами/aria из JS -->
+      <div id="accountSidebarOverlay" class="account-sidebar__overlay" aria-hidden="true"></div>
+
       <!-- Content -->
       <section class="account-main">
         <header class="account-topbar">
@@ -60,7 +68,9 @@
             <button id="accountNavOpenBtn"
                     class="account-burger"
                     type="button"
-                    aria-label="Открыть меню кабинета">
+                    aria-label="Открыть меню кабинета"
+                    aria-controls="accountSidebar"
+                    aria-expanded="false">
               <i class="fas fa-bars"></i>
             </button>
             <h1 class="account-topbar__title brand-font">{% block account_title %}{% endblock %}</h1>
@@ -78,4 +88,8 @@
 
 {% block extra_js %}
 <script src="{% static 'js/form_errors_autoclear.js' %}" defer></script>
+<script src="{% static 'js/account-sidebar.js' %}" defer></script>
+{% block extra_js_double %}
 {% endblock %}
+{% endblock %}
+

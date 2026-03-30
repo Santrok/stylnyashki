@@ -19,6 +19,7 @@ from django.contrib import messages
 from django.db.models import Q, Min, Max
 from django.utils import timezone
 from django.utils.http import url_has_allowed_host_and_scheme
+from django.views.decorators.http import require_POST
 
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
@@ -26,11 +27,12 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticatedOrReadOnly
 
 from .forms import RegisterForm, LoginForm, AccountForm, PostalAddressForm, EuropostAddressForm, CheckoutForm
-from .models import Product, SizeOption, Cart, CartItem, Category, Address, Order, OrderItem
+from .models import Product, SizeOption, Cart, CartItem, Category, Address, Order, OrderItem, FavoriteItem
 from .serializers import (
     ProductSerializer, ProductListSerializer,
     CartSerializer, CartItemSerializer,
 )
+from .services.favorites import get_or_create_favorite
 from .services.merge import merge_cart_on_login, merge_favorites_on_login
 from .utils import _build_pagination_pages
 
@@ -567,6 +569,87 @@ def account_order_detail_view(request, public_id):
         'order': order,
         'problem_products': problem_products,
     })
+
+
+@login_required
+def account_favorites_view(request):
+    """
+    Страница избранного в личном кабинете.
+    Отображает элементы FavoriteItem, связанные с Favorite пользователя (get_or_create_favorite гарантирует наличие).
+    """
+    fav = get_or_create_favorite(request)  # для залогиненного вернёт Favorite.user = request.user
+    items_qs = fav.items.select_related("product").order_by("-created_at")
+    print(items_qs)
+
+    # Пагинация
+    per_page = 12
+    paginator = Paginator(items_qs, per_page)
+    page = request.GET.get("page", 1)
+    try:
+        items_page = paginator.page(page)
+    except PageNotAnInteger:
+        items_page = paginator.page(1)
+    except EmptyPage:
+        items_page = paginator.page(paginator.num_pages)
+    return render(request, "store/account_favorites.html", {
+        "items_page": items_page,
+    })
+
+
+@login_required
+@require_POST
+def favorite_remove_view(request, item_id):
+    """
+    Удалить единицу FavoriteItem (по id) — безопасно, только если принадлежит текущему Favorite.
+    """
+    fav = get_or_create_favorite(request)
+    fi = FavoriteItem.objects.filter(id=item_id, favorite=fav).first()
+    if not fi:
+        messages.error(request, "Позиция не найдена.")
+        return redirect("account_favorites")
+
+    fi.delete()
+    messages.success(request, "Товар удалён из избранного.")
+    # Возвращаем на ту же страницу (с учётом пагинации можно передать ?page=...)
+    return redirect("account_favorites")
+
+
+@login_required
+@require_POST
+def favorite_add_to_cart_view(request, item_id):
+    """
+    Добавляет продукт из избранного (FavoriteItem id) в корзину и удаляет элемент из избранного.
+    Если товар недоступен — показываем ошибку.
+    """
+    fav = get_or_create_favorite(request)
+    fi = get_object_or_404(FavoriteItem, id=item_id, favorite=fav)
+    product = fi.product
+
+    # Проверка доступности товара
+    if not getattr(product, "is_active", True) or getattr(product, "status", None) == Product.Status.SOLD:
+        messages.error(request, "К сожалению, этот товар недоступен для добавления в корзину.")
+        # пометим позицию как удалённую из избранного (опционально) или пометим каким-то статусом — здесь просто оставим
+        return redirect("account_favorites")
+
+    cart = get_or_create_cart(request)
+
+    # Пытаемся добавить в корзину:
+    try:
+        # Если у cart есть метод add_product( product, quantity, size )
+        if hasattr(cart, "add_product"):
+            cart.add_product(product=product, quantity=1)
+        else:
+            # Попробуем создать CartItem напрямую — подправь поля под свою модель CartItem
+            CartItem.objects.create(cart=cart, product=product, quantity=1)
+    except Exception:
+        messages.error(request, "Не удалось добавить товар в корзину. Попробуйте ещё раз.")
+        return redirect("account_favorites")
+
+    # Удаляем элемент из избранного (т.к. добавили в корзину)
+    fi.delete()
+    messages.success(request, "Товар добавлен в корзину.")
+    # Перенаправляем на корзину или остаёмся в избранном — здесь отправим на корзину
+    return redirect("cart")
 
 
 
