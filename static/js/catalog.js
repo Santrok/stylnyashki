@@ -1,159 +1,203 @@
-(function () {
-  const filtersOverlay = document.getElementById('mobileFilters');
+// static/js/catalog.js
+// Mobile filters drawer + double-range sync + form move logic with smooth transitions and reflow
+document.addEventListener('DOMContentLoaded', function () {
+  // Elements
+  const mobileOverlay = document.getElementById('mobileFilters');
   const filtersOpenBtn = document.getElementById('filtersOpenBtn');
   const filtersCloseBtn = document.getElementById('filtersCloseBtn');
   const filtersApplyBtn = document.getElementById('filtersApplyBtn');
-  const sidebar = document.getElementById('filtersSidebar');
   const filtersDrawerBody = document.getElementById('filtersDrawerBody');
+  const filtersForm = document.getElementById('filtersForm');
+  const filtersSidebar = document.getElementById('filtersSidebar');
+
+  // Drawer element inside overlay
+  const filtersDrawer = mobileOverlay ? mobileOverlay.querySelector('.filters-drawer') : null;
+
+  // State
+  let formMoved = false;
+  let waitingForCloseTransition = false;
+
+  function moveFormToDrawer() {
+    if (!filtersForm || !filtersDrawerBody || formMoved) return;
+    filtersDrawerBody.appendChild(filtersForm);
+    formMoved = true;
+  }
+
+  function moveFormBackToSidebar() {
+    if (!filtersForm || !filtersSidebar || !formMoved) return;
+    filtersSidebar.appendChild(filtersForm);
+    formMoved = false;
+  }
 
   function openFilters() {
-    if (!filtersOverlay) return;
+    if (!mobileOverlay) return;
+    moveFormToDrawer();
+    // Force reflow so transition will run when we add the class
+    // eslint-disable-next-line no-unused-expressions
+    void mobileOverlay.offsetWidth;
+    mobileOverlay.classList.add('is-open');
+    mobileOverlay.setAttribute('aria-hidden', 'false');
+    const first = mobileOverlay.querySelector('button, a, input, select, textarea');
+    if (first) first.focus();
+    document.documentElement.style.overflow = 'hidden';
+    waitingForCloseTransition = false;
+  }
 
-    if (sidebar && filtersDrawerBody) {
-      filtersDrawerBody.innerHTML = '';
-
-      const clone = sidebar.cloneNode(true);
-      clone.style.display = 'flex';
-      clone.style.width = '100%';
-      clone.style.borderRight = 'none';
-      clone.style.height = 'auto';
-      clone.classList.remove('custom-scroll');
-
-      filtersDrawerBody.appendChild(clone);
-    }
-
-    filtersOverlay.classList.add('is-open');
-    filtersOverlay.setAttribute('aria-hidden', 'false');
-    document.body.classList.add('menu-open');
+  function handleCloseTransitionEnd(e) {
+    if (!waitingForCloseTransition) return;
+    // ensure we only act for overlay's opacity transition or drawer transform end
+    // move form back now
+    moveFormBackToSidebar();
+    waitingForCloseTransition = false;
+    mobileOverlay.removeEventListener('transitionend', handleCloseTransitionEnd);
   }
 
   function closeFilters() {
-    if (!filtersOverlay) return;
-    filtersOverlay.classList.remove('is-open');
-    filtersOverlay.setAttribute('aria-hidden', 'true');
-    document.body.classList.remove('menu-open');
+    if (!mobileOverlay) return;
+    // remove is-open to start hide transition
+    mobileOverlay.classList.remove('is-open');
+    mobileOverlay.setAttribute('aria-hidden', 'true');
+    document.documentElement.style.overflow = '';
+    if (filtersOpenBtn) filtersOpenBtn.focus();
+
+    if (formMoved) {
+      waitingForCloseTransition = true;
+      // wait for the overlay transition to finish before moving form back
+      mobileOverlay.addEventListener('transitionend', handleCloseTransitionEnd);
+      // safety fallback
+      setTimeout(() => {
+        if (waitingForCloseTransition) handleCloseTransitionEnd({ target: mobileOverlay });
+      }, 500);
+    } else {
+      moveFormBackToSidebar();
+    }
   }
 
-  filtersOpenBtn && filtersOpenBtn.addEventListener('click', openFilters);
-  filtersCloseBtn && filtersCloseBtn.addEventListener('click', closeFilters);
+  if (filtersOpenBtn) filtersOpenBtn.addEventListener('click', (e) => { e.preventDefault(); openFilters(); });
+  if (filtersCloseBtn) filtersCloseBtn.addEventListener('click', (e) => { e.preventDefault(); closeFilters(); });
+  if (filtersApplyBtn) filtersApplyBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    if (filtersForm) filtersForm.submit();
+    else closeFilters();
+  });
 
-  // Apply = submit form in drawer (if exists), else just close
-  filtersApplyBtn && filtersApplyBtn.addEventListener('click', function () {
-    const form = filtersDrawerBody ? filtersDrawerBody.querySelector('form') : null;
-    if (form) {
-      form.submit();
-      return;
+  if (mobileOverlay) {
+    mobileOverlay.addEventListener('click', (e) => { if (e.target === mobileOverlay) closeFilters(); });
+  }
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && mobileOverlay && mobileOverlay.classList.contains('is-open')) closeFilters(); });
+
+  window.addEventListener('resize', function () {
+    if (window.innerWidth >= 768 && formMoved) {
+      if (mobileOverlay && mobileOverlay.classList.contains('is-open')) {
+        mobileOverlay.classList.remove('is-open');
+        mobileOverlay.setAttribute('aria-hidden', 'true');
+        document.documentElement.style.overflow = '';
+      }
+      moveFormBackToSidebar();
     }
-    closeFilters();
   });
 
-  filtersOverlay && filtersOverlay.addEventListener('click', function (e) {
-    if (e.target === filtersOverlay) closeFilters();
-  });
-
-  document.addEventListener('keydown', function (e) {
-    if (e.key === 'Escape') closeFilters();
-  });
-})();
-
-  // ---------- Price range (double slider) ----------
+  // ---------- Double range (price) sync (unchanged logic) ----------
   const minRange = document.getElementById('minPriceRange');
   const maxRange = document.getElementById('maxPriceRange');
   const minInput = document.getElementById('minPriceInput');
   const maxInput = document.getElementById('maxPriceInput');
-  const fill = document.getElementById('priceRangeFill');
   const minLabel = document.getElementById('priceMinLabel');
   const maxLabel = document.getElementById('priceMaxLabel');
-  const priceRange = document.getElementById('priceRange');
+  const rangeFill = document.getElementById('priceRangeFill');
+  const rangeWrapper = document.getElementById('priceRange');
 
-  function clamp(n, a, b) { return Math.max(a, Math.min(b, n)); }
+  if (rangeWrapper && minRange && maxRange && rangeFill) {
+    const minBound = Number(rangeWrapper.dataset.min || 0);
+    const maxBound = Number(rangeWrapper.dataset.max || 0) || minBound;
 
-  function updateFill(minVal, maxVal) {
-    if (!priceRange || !fill) return;
+    function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
 
-    const min = parseFloat(priceRange.dataset.min || '0');
-    const max = parseFloat(priceRange.dataset.max || '0');
-
-    if (max <= min) {
-      fill.style.left = '0%';
-      fill.style.width = '100%';
-      return;
+    function updateFill(minVal, maxVal) {
+      const total = (maxBound - minBound) || 1;
+      const leftPct = ((minVal - minBound) / total) * 100;
+      const rightPct = ((maxVal - minBound) / total) * 100;
+      const width = Math.max(0, rightPct - leftPct);
+      rangeFill.style.left = leftPct + '%';
+      rangeFill.style.width = width + '%';
     }
 
-    const left = ((minVal - min) / (max - min)) * 100;
-    const right = ((maxVal - min) / (max - min)) * 100;
+    function syncFromRanges(e) {
+      let minVal = Number(minRange.value);
+      let maxVal = Number(maxRange.value);
 
-    fill.style.left = `${left}%`;
-    fill.style.width = `${Math.max(0, right - left)}%`;
-  }
+      if (minVal > maxVal) {
+        if (e && e.target === minRange) {
+          minVal = maxVal;
+          minRange.value = minVal;
+        } else {
+          maxVal = minVal;
+          maxRange.value = maxVal;
+        }
+      }
 
-  function syncFromRanges() {
-    if (!minRange || !maxRange) return;
+      if (minInput) minInput.value = Math.round(minVal);
+      if (maxInput) maxInput.value = Math.round(maxVal);
+      if (minLabel) minLabel.textContent = minVal ? Math.round(minVal) : '—';
+      if (maxLabel) maxLabel.textContent = maxVal ? Math.round(maxVal) : '—';
 
-    let minVal = parseInt(minRange.value || '0', 10);
-    let maxVal = parseInt(maxRange.value || '0', 10);
-
-    // не даём min > max
-    if (minVal > maxVal) {
-      // если двигаем min — подтянем max, если двигаем max — подтянем min
-      const active = document.activeElement;
-      if (active === minRange) maxVal = minVal;
-      else minVal = maxVal;
-
-      minRange.value = String(minVal);
-      maxRange.value = String(maxVal);
+      updateFill(minVal, maxVal);
     }
 
-    if (minInput) minInput.value = String(minVal);
-    if (maxInput) maxInput.value = String(maxVal);
+    function syncFromInputs() {
+      let minVal = Number(minInput && minInput.value ? minInput.value : minBound);
+      let maxVal = Number(maxInput && maxInput.value ? maxInput.value : maxBound);
 
-    if (minLabel) minLabel.textContent = String(minVal);
-    if (maxLabel) maxLabel.textContent = String(maxVal);
+      minVal = clamp(minVal, minBound, maxBound);
+      maxVal = clamp(maxVal, minBound, maxBound);
 
-    updateFill(minVal, maxVal);
-  }
+      if (minVal > maxVal) {
+        const tmp = minVal; minVal = maxVal; maxVal = tmp;
+      }
 
-  function syncFromInputs() {
-    if (!minRange || !maxRange || !priceRange) return;
-
-    const min = parseInt(priceRange.dataset.min || '0', 10);
-    const max = parseInt(priceRange.dataset.max || '0', 10);
-
-    let minVal = minInput && minInput.value !== '' ? parseInt(minInput.value, 10) : min;
-    let maxVal = maxInput && maxInput.value !== '' ? parseInt(maxInput.value, 10) : max;
-
-    if (Number.isNaN(minVal)) minVal = min;
-    if (Number.isNaN(maxVal)) maxVal = max;
-
-    minVal = clamp(minVal, min, max);
-    maxVal = clamp(maxVal, min, max);
-
-    if (minVal > maxVal) minVal = maxVal;
-
-    minRange.value = String(minVal);
-    maxRange.value = String(maxVal);
-
-    if (minLabel) minLabel.textContent = String(minVal);
-    if (maxLabel) maxLabel.textContent = String(maxVal);
-
-    updateFill(minVal, maxVal);
-  }
-
-  // disable if one price
-  if (priceRange) {
-    const min = parseInt(priceRange.dataset.min || '0', 10);
-    const max = parseInt(priceRange.dataset.max || '0', 10);
-    if (max <= min) {
-      if (minRange) minRange.disabled = true;
-      if (maxRange) maxRange.disabled = true;
+      minRange.value = minVal;
+      maxRange.value = maxVal;
+      if (minLabel) minLabel.textContent = minVal ? Math.round(minVal) : '—';
+      if (maxLabel) maxLabel.textContent = maxVal ? Math.round(maxVal) : '—';
+      updateFill(minVal, maxVal);
     }
+
+    minRange.style.pointerEvents = 'auto';
+    maxRange.style.pointerEvents = 'auto';
+
+    minRange.addEventListener('input', syncFromRanges);
+    maxRange.addEventListener('input', syncFromRanges);
+
+    if (minInput) {
+      minInput.addEventListener('input', syncFromInputs);
+      minInput.addEventListener('change', syncFromInputs);
+    }
+    if (maxInput) {
+      maxInput.addEventListener('input', syncFromInputs);
+      maxInput.addEventListener('change', syncFromInputs);
+    }
+
+    (function initRange() {
+      if (!minRange.hasAttribute('min')) minRange.min = minBound;
+      if (!minRange.hasAttribute('max')) minRange.max = maxBound;
+      if (!maxRange.hasAttribute('min')) maxRange.min = minBound;
+      if (!maxRange.hasAttribute('max')) maxRange.max = maxBound;
+
+      const initMin = Number(minRange.value || (minInput && minInput.value) || minBound);
+      const initMax = Number(maxRange.value || (maxInput && maxInput.value) || maxBound);
+
+      minRange.value = clamp(initMin, minBound, maxBound);
+      maxRange.value = clamp(initMax, minBound, maxBound);
+
+      syncFromRanges();
+    })();
   }
 
-  minRange && minRange.addEventListener('input', syncFromRanges);
-  maxRange && maxRange.addEventListener('input', syncFromRanges);
-
-  minInput && minInput.addEventListener('input', syncFromInputs);
-  maxInput && maxInput.addEventListener('input', syncFromInputs);
-
-  // initial render
-  syncFromRanges();
+  // Make sort select full-width on small screens
+  const sortMobile = document.querySelector('.sort-mobile');
+  if (sortMobile) {
+    function adjustSortWidth() { if (window.innerWidth <= 480) sortMobile.style.width = '100%'; else sortMobile.style.width = ''; }
+    adjustSortWidth();
+    window.addEventListener('resize', adjustSortWidth);
+  }
+});

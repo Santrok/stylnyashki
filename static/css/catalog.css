@@ -159,6 +159,12 @@
 }
 .check-col{ display:flex; flex-direction:column; gap: 6px; }
 
+@media (min-width: 768px) {
+    .check-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
 .custom-checkbox{
   display:flex;
   align-items:center;
@@ -301,7 +307,7 @@
   display:flex;
   align-items:center;
   gap: 12px;
-  flex-wrap:wrap;
+  /*flex-wrap:wrap;*/
 }
 
 
@@ -460,7 +466,7 @@
   font-weight: 900;
   color:#1f2937;
 }
-.filters-drawer__body{ flex:1; overflow:auto; }
+.filters-drawer__body{ flex:1; padding: 20px; overflow:auto; }
 .filters-drawer__footer{
   padding: 16px;
   border-top:1px solid var(--border);

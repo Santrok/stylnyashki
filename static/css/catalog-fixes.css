@@ -1,0 +1,155 @@
+/* catalog-fixes.css - мобильные фиксы и плавные анимации */
+
+/* Override older display:none rules in main CSS (important ensures transition works) */
+.filters-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.35);
+  z-index: 9999;
+  /* do not use display for show/hide; use opacity/visibility to animate */
+  display: block !important;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 260ms cubic-bezier(.2,.8,.2,1), visibility 0s linear 260ms;
+  pointer-events: none;
+}
+
+.filters-overlay.is-open {
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 260ms cubic-bezier(.2,.8,.2,1);
+  pointer-events: auto;
+}
+
+/* Drawer slide */
+.filters-drawer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  height: 100%;
+  width: min(92vw, 420px);
+  background: #fff;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+  transform: translateX(105%);
+  transition: transform 300ms cubic-bezier(.2,.8,.2,1), box-shadow 160ms ease;
+  display: flex;
+  flex-direction: column;
+  will-change: transform;
+}
+
+/* visible state */
+.filters-overlay.is-open .filters-drawer { transform: translateX(0); }
+
+/* small screens: hide sidebar (form will be moved into the drawer) */
+@media (max-width: 767px) {
+  .filters-sidebar { display: none; }
+  .filters-open-btn { display: inline-flex !important; }
+}
+
+/* Range fixes */
+.range__input {
+  position:absolute;
+  left:0; right:0;
+  top:0;
+  width:100%;
+  height:18px;
+  background: transparent;
+  -webkit-appearance: none;
+  appearance: none;
+  margin:0;
+  pointer-events: auto;
+}
+.range__input::-webkit-slider-thumb{
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  background: var(--purple);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+  cursor: pointer;
+}
+.range__input::-moz-range-thumb{
+  width: 14px;
+  height: 14px;
+  border: none;
+  border-radius: 999px;
+  background: var(--purple);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+  cursor: pointer;
+}
+#minPriceRange { z-index: 3; }
+#maxPriceRange { z-index: 4; }
+.range__fill {
+  position:absolute;
+  top: 50%;
+  height: 4px;
+  transform: translateY(-50%);
+  background: var(--purple);
+  border-radius: 999px;
+  left: 0%;
+  width: 100%;
+  pointer-events: none;
+  transition: left 120ms linear, width 120ms linear;
+}
+
+/* Mobile sort select */
+.sort-mobile__select {
+  width: 115px;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  background: #fff;
+  font-weight: 800;
+  color: #1f2937;
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='8' viewBox='0 0 14 8'%3E%3Cpath fill='%236b7280' d='M7 8L0 0h14z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 14px 8px;
+  transition: border-color 120ms ease, box-shadow 120ms ease;
+}
+@media (max-width: 480px) { .sort-mobile { width: 100%; } }
+
+/* Drawer polish */
+.filters-drawer{ transition-timing-function: cubic-bezier(.2,.8,.2,1); }
+
+/* File input label */
+.file-input { position: relative; display:flex; gap:12px; align-items:center; }
+.file-input__button {
+  position: relative;
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding:10px 14px;
+  border-radius:12px;
+  background:var(--purple);
+  color:#fff;
+  font-weight:900;
+  cursor:pointer;
+  border:0;
+}
+.file-input__btn-text { pointer-events:none; }
+.file-input__real {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  z-index: 2;
+}
+.file-input__names {
+  color: var(--muted);
+  font-weight: 700;
+  font-size: 13px;
+  max-width: 60%;
+  word-break: break-word;
+}
+input[type="file"]::-webkit-file-upload-button { visibility: hidden; }
