@@ -62,10 +62,20 @@
     </div>
 
     <div class="file-input" aria-live="polite">
-  <input type="file" id="imagesInput" name="images" multiple accept="image/*" class="file-input__real" />
-  <label for="imagesInput" class="file-input__button" role="button" aria-controls="imagesInput">
+  <!-- label как видимая кнопка, input вложен внутри и полностью прозрачный поверх label -->
+  <label class="file-input__button" for="imagesInput" role="button" aria-controls="imagesInput">
+    <input
+      type="file"
+      id="imagesInput"
+      name="images"
+      multiple
+      accept="image/*"
+      class="file-input__real"
+      aria-hidden="false"
+    />
     <span class="file-input__btn-text">Выбрать файлы</span>
   </label>
+
   <div id="filesCount" class="file-input__names">Выбрано файлов: 0</div>
 </div>
 

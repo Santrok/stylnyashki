@@ -1,4 +1,3 @@
-// static/js/bulk-upload.js
 document.addEventListener('DOMContentLoaded', function () {
   const imagesInput = document.getElementById('imagesInput');
   const filesCount = document.getElementById('filesCount');
@@ -9,7 +8,30 @@ document.addEventListener('DOMContentLoaded', function () {
   const uploadStatus = document.getElementById('uploadStatus');
   const resultArea = document.getElementById('resultArea');
 
+  // client-side limits (optional)
+  const MAX_FILE_SIZE = 12 * 1024 * 1024; // 12 MB per file
+  const MAX_TOTAL_FILES = 150;
+
+  // files array holds selected File objects across multiple selects
   let files = [];
+
+  // ensure ModelForm fields look consistent (adds .f__input to selects/inputs if not present)
+  (function normalizeFormFields() {
+    const form = document.getElementById('bulkUploadForm');
+    if (!form) return;
+    const selectors = [
+      'select',
+      'input[type="text"]',
+      'input[type="number"]',
+      'input[type="email"]',
+      'textarea'
+    ];
+    selectors.forEach(sel => {
+      form.querySelectorAll(sel).forEach(el => {
+        if (!el.classList.contains('f__input')) el.classList.add('f__input');
+      });
+    });
+  })();
 
   function getCookie(name) {
     const v = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
@@ -17,10 +39,54 @@ document.addEventListener('DOMContentLoaded', function () {
   }
   const csrftoken = getCookie('csrftoken');
 
-  imagesInput.addEventListener('change', function () {
-    files = Array.from(imagesInput.files || []);
+  function updateFilesCount() {
     filesCount.textContent = `Выбрано файлов: ${files.length}`;
-  });
+  }
+
+  function appendFiles(fileList) {
+    // Accept FileList or Array<File>
+    const added = [];
+    for (let i = 0; i < fileList.length; i++) {
+      const f = fileList[i];
+      if (!f || !f.type || !f.type.startsWith('image/')) continue; // skip non-images
+
+      if (f.size && f.size > MAX_FILE_SIZE) {
+        // skip files that are too large
+        alert(`Файл "${f.name}" пропущен — превышает максимальный размер ${Math.round(MAX_FILE_SIZE/1024/1024)}MB`);
+        continue;
+      }
+
+      // avoid duplicates (name + size + type)
+      const exists = files.some(existing => existing.name === f.name && existing.size === f.size && existing.type === f.type);
+      if (exists) continue;
+
+      // total files limit
+      if (files.length + added.length >= MAX_TOTAL_FILES) {
+        alert(`Достигнут лимит файлов: ${MAX_TOTAL_FILES}. Остальные файлы проигнорированы.`);
+        break;
+      }
+
+      added.push(f);
+    }
+
+    if (added.length) {
+      files = files.concat(added);
+      updateFilesCount();
+    }
+  }
+
+  // expose accessor for other scripts (upload code will use this files array)
+  window.getBulkFiles = () => files;
+  window.clearBulkFiles = () => { files = []; updateFilesCount(); };
+
+  // handle input change: append, then clear input.value so user can select same file(s) again
+  if (imagesInput) {
+    imagesInput.addEventListener('change', function (e) {
+      appendFiles(e.target.files || []);
+      // reset input to allow picking same files again if needed
+      imagesInput.value = '';
+    });
+  }
 
   async function uploadBatch(batchFiles, commonData) {
     const fd = new FormData();
@@ -69,13 +135,13 @@ document.addEventListener('DOMContentLoaded', function () {
       return;
     }
     const brand = document.getElementById('brand').value.trim();
-    const category_id = document.getElementById('category_id').value;
-    const season = document.getElementById('season').value;
-    const price = document.getElementById('price').value;
-    const discount = document.getElementById('discount').value;
-    const is_active = document.getElementById('is_active').checked ? '1' : '';
+    const category_id = document.getElementById('category_id') ? document.getElementById('category_id').value : '';
+    const season = document.getElementById('season') ? document.getElementById('season').value : '';
+    const price = document.getElementById('price') ? document.getElementById('price').value : '';
+    const discount = document.getElementById('discount') ? document.getElementById('discount').value : '';
+    const is_active = document.getElementById('is_active') ? (document.getElementById('is_active').checked ? '1' : '') : '';
     const sizesSelect = document.getElementById('sizes');
-    const sizes = Array.from(sizesSelect.selectedOptions).map(o => o.value);
+    const sizes = sizesSelect ? Array.from(sizesSelect.selectedOptions).map(o => o.value) : [];
 
     const commonData = {
       name, brand, category_id, season, price, discount, is_active

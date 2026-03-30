@@ -671,20 +671,13 @@ select.f__input:disabled {
     margin-top: 14px;
 }
 
-.file-input__real {
-  position: absolute;
-  left: -9999px;
-  width: 1px;
-  height: 1px;
-  opacity: 0;
-  pointer-events: none;
-}
-
-/* Видимая кнопка (стилизована как остальные поля) */
+/* file-input: real input covers the label, but is transparent */
+.file-input { position: relative; display:flex; gap:12px; align-items:center; }
 .file-input__button {
+  position: relative;
   display:inline-flex;
   align-items:center;
-  justify-content:center;
+  gap:8px;
   padding:10px 14px;
   border-radius:12px;
   background:var(--purple);
@@ -692,13 +685,33 @@ select.f__input:disabled {
   font-weight:900;
   cursor:pointer;
   border:0;
-  font-size:14px;
 }
-.file-input__button:active{ transform: translateY(1px); }
+.file-input__btn-text { pointer-events:none; } /* label captures clicks */
+
+.file-input__real {
+  position: absolute;
+  inset: 0; /* fill the label */
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  z-index: 2;
+}
+
+/* name/count area */
 .file-input__names {
-  margin-left:12px;
-  color:var(--muted);
-  font-weight:700;
-  max-width:55%;
-  word-break:break-word;
+  color: var(--muted);
+  font-weight: 700;
+  font-size: 13px;
+  max-width: 60%;
+  word-break: break-word;
 }
+
+/* Ensure selects use your .f__input styles — basic rules (you likely already have .f__input) */
+select.f__input { -webkit-appearance: none; appearance: none; background-position: right 12px center; padding-right: 44px; }
+
+/* fallback: if native file button styling is used elsewhere, hide it */
+input[type="file"]::-webkit-file-upload-button { visibility: hidden; }
