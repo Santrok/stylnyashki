@@ -87,7 +87,6 @@ img{ max-width:100%; display:block; }
   height:64px;
   background: var(--white);
   box-shadow: var(--shadow-sm);
-  position: sticky;
   top:0;
   z-index:20;
 }
@@ -774,4 +773,32 @@ body.menu-open{ overflow:hidden; }
        попробуй сначала без transform; если смещение осталось — раскомментируй. */
     /* transform: translateY(-0.2px) translateX(0); */
   }
+}
+
+/* фиксированный header: всегда прижат к верху экрана */
+.header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000; /* при необходимости увеличь */
+  /* оставляем визуальные свойства */
+  background: var(--white);
+  box-shadow: var(--shadow-sm);
+}
+
+/* переменная --header-height будет устанавливаться скриптом (fallback 64px) */
+:root {
+  --header-height: 64px;
+}
+
+/* main получает отступ сверху равный высоте header, чтобы контент не скрывался */
+.site__main {
+  padding-top: var(--header-height);
+}
+
+/* если хочешь, header__inner можно уменьшить вертикальные паддинги,
+   чтобы header не оказался выше ожидаемой высоты — но JS учтёт текущую высоту */
+.header__inner {
+  /* можно оставить как есть; JS корректно вычислит высоту */
 }

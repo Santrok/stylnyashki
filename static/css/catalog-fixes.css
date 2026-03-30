@@ -1,27 +1,37 @@
+:root{
+  /* "Медленная" анимация */
+  --overlay-duration: 380ms;            /* затемнение фона */
+  --overlay-ease: cubic-bezier(.2,.8,.2,1);
+  --drawer-duration: 420ms;             /* сдвиг drawer */
+  --drawer-ease: cubic-bezier(.2,.8,.2,1);
+}
+
 /* catalog-fixes.css - мобильные фиксы и плавные анимации */
 
-/* Override older display:none rules in main CSS (important ensures transition works) */
+/* ========== Overlay and Drawer transitions ========== */
+
+/* Override older display:none rules in main CSS: use opacity/visibility to animate */
 .filters-overlay {
   position: fixed;
   inset: 0;
   background: rgba(0,0,0,0.35);
   z-index: 9999;
-  /* do not use display for show/hide; use opacity/visibility to animate */
-  display: block !important;
+  display: block !important; /* ensure element is present for transitions */
   opacity: 0;
   visibility: hidden;
-  transition: opacity 260ms cubic-bezier(.2,.8,.2,1), visibility 0s linear 260ms;
+  transition: opacity var(--overlay-duration) var(--overlay-ease), visibility 0s linear var(--overlay-duration);
   pointer-events: none;
 }
 
+/* open */
 .filters-overlay.is-open {
   opacity: 1;
   visibility: visible;
-  transition: opacity 260ms cubic-bezier(.2,.8,.2,1);
+  transition: opacity var(--overlay-duration) var(--overlay-ease);
   pointer-events: auto;
 }
 
-/* Drawer slide */
+/* Drawer slide (transform) */
 .filters-drawer {
   position: absolute;
   top: 0;
@@ -31,7 +41,7 @@
   background: #fff;
   box-shadow: 0 20px 40px rgba(0,0,0,0.2);
   transform: translateX(105%);
-  transition: transform 300ms cubic-bezier(.2,.8,.2,1), box-shadow 160ms ease;
+  transition: transform var(--drawer-duration) var(--drawer-ease), box-shadow 160ms ease;
   display: flex;
   flex-direction: column;
   will-change: transform;
@@ -115,7 +125,7 @@
 @media (max-width: 480px) { .sort-mobile { width: 100%; } }
 
 /* Drawer polish */
-.filters-drawer{ transition-timing-function: cubic-bezier(.2,.8,.2,1); }
+.filters-drawer{ transition-timing-function: var(--drawer-ease); }
 
 /* File input label */
 .file-input { position: relative; display:flex; gap:12px; align-items:center; }

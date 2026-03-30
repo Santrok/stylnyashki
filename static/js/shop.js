@@ -169,3 +169,27 @@
   loadState().catch(() => {});
 });
 })();
+
+// ensure header always considered for main offset
+(function () {
+  function updateHeaderHeight() {
+    var header = document.querySelector('.header');
+    if (!header) return;
+    // get computed height (includes padding, borders)
+    var h = header.getBoundingClientRect().height;
+    // set CSS variable on root
+    document.documentElement.style.setProperty('--header-height', Math.ceil(h) + 'px');
+  }
+
+  // update on load and resize (debounced)
+  window.addEventListener('load', updateHeaderHeight);
+  var resizeTimer;
+  window.addEventListener('resize', function () {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(updateHeaderHeight, 120);
+  });
+
+  // in case header content changes dynamically (e.g., user login),
+  // you can call updateHeaderHeight() from those flows.
+  updateHeaderHeight();
+})();

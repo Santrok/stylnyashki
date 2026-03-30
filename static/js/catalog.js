@@ -1,5 +1,11 @@
 // static/js/catalog.js
-// Mobile filters drawer + double-range sync + form move logic with smooth transitions and reflow
+// Mobile filters drawer + double-range sync + form move logic with smooth transitions (med slow)
+//
+// Notes:
+// - Reads CSS vars --overlay-duration and --drawer-duration to sync JS fallback.
+// - Waits for transitionend (opacity or transform) before moving form back to sidebar.
+// - Forces reflow before adding .is-open to ensure transitions run.
+
 document.addEventListener('DOMContentLoaded', function () {
   // Elements
   const mobileOverlay = document.getElementById('mobileFilters');
@@ -10,8 +16,20 @@ document.addEventListener('DOMContentLoaded', function () {
   const filtersForm = document.getElementById('filtersForm');
   const filtersSidebar = document.getElementById('filtersSidebar');
 
-  // Drawer element inside overlay
-  const filtersDrawer = mobileOverlay ? mobileOverlay.querySelector('.filters-drawer') : null;
+  // Helper: read CSS time string like "380ms" or "0.38s" -> ms number
+  function msFromCssTime(s) {
+    if (!s) return 400;
+    s = s.trim();
+    if (s.endsWith('ms')) return parseFloat(s);
+    if (s.endsWith('s')) return parseFloat(s) * 1000;
+    return parseFloat(s) || 400;
+  }
+
+  // read durations from CSS variables (fallback to our "slow" defaults)
+  const css = getComputedStyle(document.documentElement);
+  const overlayDurationMs = msFromCssTime(css.getPropertyValue('--overlay-duration').trim() || '380ms');
+  const drawerDurationMs = msFromCssTime(css.getPropertyValue('--drawer-duration').trim() || '420ms');
+  const fallbackDelay = Math.max(overlayDurationMs, drawerDurationMs) + 150; // safety margin
 
   // State
   let formMoved = false;
@@ -31,12 +49,14 @@ document.addEventListener('DOMContentLoaded', function () {
 
   function openFilters() {
     if (!mobileOverlay) return;
+    // move form first (so user sees real controls)
     moveFormToDrawer();
-    // Force reflow so transition will run when we add the class
+    // Force reflow so transition will animate
     // eslint-disable-next-line no-unused-expressions
     void mobileOverlay.offsetWidth;
     mobileOverlay.classList.add('is-open');
     mobileOverlay.setAttribute('aria-hidden', 'false');
+    // focus first interactive
     const first = mobileOverlay.querySelector('button, a, input, select, textarea');
     if (first) first.focus();
     document.documentElement.style.overflow = 'hidden';
@@ -44,9 +64,9 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   function handleCloseTransitionEnd(e) {
+    // Only react for overlay opacity or drawer transform completion (avoid other transitions)
+    if (e && e.propertyName && !['opacity', 'transform'].includes(e.propertyName)) return;
     if (!waitingForCloseTransition) return;
-    // ensure we only act for overlay's opacity transition or drawer transform end
-    // move form back now
     moveFormBackToSidebar();
     waitingForCloseTransition = false;
     mobileOverlay.removeEventListener('transitionend', handleCloseTransitionEnd);
@@ -54,7 +74,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
   function closeFilters() {
     if (!mobileOverlay) return;
-    // remove is-open to start hide transition
+    // start hide transition
     mobileOverlay.classList.remove('is-open');
     mobileOverlay.setAttribute('aria-hidden', 'true');
     document.documentElement.style.overflow = '';
@@ -62,17 +82,18 @@ document.addEventListener('DOMContentLoaded', function () {
 
     if (formMoved) {
       waitingForCloseTransition = true;
-      // wait for the overlay transition to finish before moving form back
+      // listen for transitionend; transitionend bubbles so we can listen on overlay
       mobileOverlay.addEventListener('transitionend', handleCloseTransitionEnd);
-      // safety fallback
+      // fallback in case transitionend didn't fire
       setTimeout(() => {
-        if (waitingForCloseTransition) handleCloseTransitionEnd({ target: mobileOverlay });
-      }, 500);
+        if (waitingForCloseTransition) handleCloseTransitionEnd({ propertyName: 'opacity', target: mobileOverlay });
+      }, fallbackDelay);
     } else {
       moveFormBackToSidebar();
     }
   }
 
+  // Attach listeners
   if (filtersOpenBtn) filtersOpenBtn.addEventListener('click', (e) => { e.preventDefault(); openFilters(); });
   if (filtersCloseBtn) filtersCloseBtn.addEventListener('click', (e) => { e.preventDefault(); closeFilters(); });
   if (filtersApplyBtn) filtersApplyBtn.addEventListener('click', (e) => {
@@ -84,8 +105,10 @@ document.addEventListener('DOMContentLoaded', function () {
   if (mobileOverlay) {
     mobileOverlay.addEventListener('click', (e) => { if (e.target === mobileOverlay) closeFilters(); });
   }
+
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && mobileOverlay && mobileOverlay.classList.contains('is-open')) closeFilters(); });
 
+  // on resize back to desktop, return form immediately
   window.addEventListener('resize', function () {
     if (window.innerWidth >= 768 && formMoved) {
       if (mobileOverlay && mobileOverlay.classList.contains('is-open')) {
@@ -97,7 +120,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   });
 
-  // ---------- Double range (price) sync (unchanged logic) ----------
+  // ---------- Double range (price) sync ----------
   const minRange = document.getElementById('minPriceRange');
   const maxRange = document.getElementById('maxPriceRange');
   const minInput = document.getElementById('minPriceInput');
