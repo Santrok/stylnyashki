@@ -93,8 +93,8 @@
       enableScrollCompensation();
 
       // ensure sidebar on top of overlay by z-index (defensive)
-      sidebar.style.zIndex = 70;
-      overlay.style.zIndex = 65;
+      sidebar.style.zIndex = 1020;
+      overlay.style.zIndex = 1010;
 
       // fallback inline transform in case CSS fails
       sidebar.style.transform = 'translateX(0)';

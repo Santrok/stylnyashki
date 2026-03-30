@@ -12,15 +12,19 @@ from decimal import Decimal
 from django.contrib.admin.views.decorators import staff_member_required
 from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
 from django.db import transaction
+from django.http import HttpResponseBadRequest, JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.models import User
 from django.contrib import messages
 from django.db.models import Q, Min, Max
+from django.urls import reverse
 from django.utils import timezone
+from django.utils.decorators import method_decorator
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
+from django.views.generic import ListView, DetailView
 
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
@@ -28,7 +32,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticatedOrReadOnly
 
 from .forms import RegisterForm, LoginForm, AccountForm, PostalAddressForm, EuropostAddressForm, CheckoutForm, \
-    ProductBulkForm
+    ProductBulkForm, OrderStatusForm
 from .models import Product, SizeOption, Cart, CartItem, Category, Address, Order, OrderItem, FavoriteItem
 from .serializers import (
     ProductSerializer, ProductListSerializer,
@@ -761,79 +765,118 @@ def products_bulk_upload_view(request):
     form = ProductBulkForm()
     return render(request, "store/account_products_bulk_upload.html", {"categories2": categories, "sizes": sizes, "form": form})
 
-    # # POST processing: support both AJAX fetch and form POST; always return JSON for batches
-    # if not request.FILES:
-    #     return JsonResponse({"created": 0, "errors": ["No files uploaded"]}, status=400)
-    #
-    # # Read common fields
-    # name = request.POST.get("name", "").strip()
-    # if not name:
-    #     return JsonResponse({"created": 0, "errors": ["Field 'name' is required"]}, status=400)
-    #
-    # brand = request.POST.get("brand") or None
-    # category_id = request.POST.get("category_id")
-    # season = request.POST.get("season") or None
-    # price = request.POST.get("price")
-    # discount = request.POST.get("discount") or 0
-    # status = request.POST.get("status") or Product.Status.AVAILABLE
-    # is_active = request.POST.get("is_active", "1") in ("1", "true", "on")
-    # sizes_ids = request.POST.getlist("sizes")  # list of strings
-    #
-    # # Resolve category and sizes
-    # category = None
-    # if category_id:
-    #     try:
-    #         category = Category.objects.get(id=int(category_id))
-    #     except Exception:
-    #         return JsonResponse({"created": 0, "errors": [f"Category id {category_id} not found"]}, status=400)
-    #
-    # sizes_qs = SizeOption.objects.filter(id__in=sizes_ids) if sizes_ids else None
-    #
-    # images = request.FILES.getlist("images")
-    # created_products = []
-    # errors = []
-    #
-    # # base name for files: slug(name) + timestamp prefix to make filenames unique
-    # base_safe = slugify(name) or "product"
-    # timestamp = int(time.time())
-    #
-    # for idx, uploaded in enumerate(images):
-    #     try:
-    #         # process image (resize + avif)
-    #         file_root = f"{base_safe}-{timestamp}-{idx}"
-    #         filename, contentfile = process_image_to_avif_and_resize(uploaded, base_name=file_root)
-    #
-    #         # create product (without image saved yet)
-    #         p = Product(
-    #             name=name,
-    #             brand=brand,
-    #             category=category,
-    #             season=season,
-    #             price=price if price else Product._meta.get_field("price").get_default(),
-    #             discount=int(discount) if discount else 0,
-    #             is_active=is_active,
-    #             status=status,
-    #         )
-    #         p.save()  # need primary key to attach M2M sizes
-    #
-    #         if sizes_qs:
-    #             p.sizes.set(sizes_qs)
-    #
-    #         # Save image to ImageField
-    #         p.image.save(filename, contentfile, save=True)
-    #
-    #         created_products.append(p.id)
-    #     except Exception as e:
-    #         # ensure partial object cleanup if created
-    #         try:
-    #             p  # noqa: F841
-    #             if hasattr(p, "pk") and p.pk:
-    #                 p.delete()
-    #         except Exception:
-    #             pass
-    #         errors.append({"index": idx, "filename": getattr(uploaded, "name", ""), "error": str(e)})
-    #
-    # return JsonResponse({"created": len(created_products), "created_ids": created_products, "errors": errors})
+def staff_required_decorator(view_func):
+    return user_passes_test(lambda u: u.is_active and u.is_staff)(view_func)
+
+@method_decorator(staff_required_decorator, name='dispatch')
+class AccountStaffOrdersListView(ListView):
+    model = Order
+    template_name = 'store/account_staff_orders_list.html'
+    context_object_name = 'orders'   # object_list will be available as 'orders'
+    paginate_by = 20
+    # default ordering will be applied if no sort param provided
+
+    def get_queryset(self):
+        qs = Order.objects.select_related('user').all()
+        q = (self.request.GET.get('q') or '').strip()
+        status = self.request.GET.get('status') or ''
+        delivery = self.request.GET.get('delivery') or ''
+        date_from = self.request.GET.get('date_from') or ''
+        date_to = self.request.GET.get('date_to') or ''
+        sort = self.request.GET.get('sort') or 'created_desc'
+
+        if q:
+            if q.isdigit():
+                # search by id OR by order_number if you prefer
+                qs = qs.filter(Q(id=int(q)) | Q(order_number__icontains=q))
+            else:
+                qs = qs.filter(
+                    Q(order_number__icontains=q) |
+                    Q(user__email__icontains=q) |
+                    Q(first_name__icontains=q) |
+                    Q(last_name__icontains=q)
+                )
+
+        if status:
+            qs = qs.filter(status=status)
+
+        if delivery:
+            qs = qs.filter(delivery_type=delivery)
+
+        if date_from:
+            d = parse_date(date_from)
+            if d:
+                qs = qs.filter(created_at__date__gte=d)
+        if date_to:
+            d = parse_date(date_to)
+            if d:
+                qs = qs.filter(created_at__date__lte=d)
+
+        # sort mapping
+        sort_map = {
+            'created_desc': '-created_at',
+            'created_asc': 'created_at',
+            'total_desc': '-total',
+            'total_asc': 'total',
+            'status_asc': 'status',
+            'status_desc': '-status',
+        }
+        order_by = sort_map.get(sort, '-created_at')
+        qs = qs.order_by(order_by)
+
+        return qs
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        # keep compatibility with template which expects orders_page
+        ctx['orders_page'] = ctx.get('page_obj')
+        ctx['orders'] = ctx.get('orders') or ctx.get('object_list')
+
+        # filters & choices for template
+        ctx['status_choices'] = Order.Status.choices
+        ctx['delivery_choices'] = Order.DeliveryType.choices
+        ctx['q'] = self.request.GET.get('q', '')
+        ctx['status_filter'] = self.request.GET.get('status', '')
+        ctx['delivery_filter'] = self.request.GET.get('delivery', '')
+        ctx['date_from'] = self.request.GET.get('date_from', '')
+        ctx['date_to'] = self.request.GET.get('date_to', '')
+        ctx['sort'] = self.request.GET.get('sort', 'created_desc')
+        return ctx
+
+@method_decorator(staff_required_decorator, name='dispatch')
+class AccountStaffOrderDetailView(DetailView):
+    model = Order
+    template_name = 'store/account_staff_order_detail.html'   # файл шаблона ниже
+    context_object_name = 'order'
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        # Status form for staff to change status via POST on this page
+        ctx['status_form'] = OrderStatusForm(instance=self.object)
+        # problem_products: пустой по умолчани��; при необходимости добавьте логику
+        ctx['problem_products'] = []
+        return ctx
+
+@staff_required_decorator
+@require_POST
+def account_order_status_update(request, pk):
+    order = get_object_or_404(Order, pk=pk)
+    new_status = request.POST.get('status')
+    if new_status is None:
+        return HttpResponseBadRequest('missing status')
+
+    valid_vals = [c[0] for c in Order.Status.choices]
+    if valid_vals and new_status not in valid_vals:
+        return HttpResponseBadRequest('invalid status')
+
+    old = order.status
+    order.status = new_status
+    order.save(update_fields=['status', 'updated_at'])
+
+    # Return JSON for AJAX requests, otherwise redirect back to detail
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        return JsonResponse({'ok': True, 'order_id': order.pk, 'old': old, 'new': order.status})
+    return redirect(reverse('account_staff_order_detail', args=[order.pk]))
 
 
 # ---------------------------------------------------------------------------

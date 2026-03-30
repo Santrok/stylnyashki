@@ -1,0 +1,154 @@
+{% extends "store/account_base.html" %}
+{% load static %}
+
+{% block title %}Стильняшки — Заказы (админ){% endblock %}
+
+{% block extra_head_double %}
+<link rel="stylesheet" href="{% static 'css/account_orders.css' %}">
+{% endblock %}
+
+{% block account_title %}Управление заказами{% endblock %}
+{% block account_content %}
+<div class="account-stack">
+
+  <!-- Форма фильтров -->
+  <div class="card" style="margin-bottom:12px;">
+    <form id="filtersForm" method="get" style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+      <input type="text" name="q" placeholder="Поиск по id, номеру, email, имени" value="{{ q }}" class="f__input" style="min-width:220px;">
+
+      <select name="status" class="f__input" style="min-width:160px;">
+        <option value="">— Все статусы —</option>
+        {% for val,label in status_choices %}
+          <option value="{{ val }}" {% if status_filter == val %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+
+      <select name="delivery" class="f__input" style="min-width:160px;">
+        <option value="">— Все типы доставки —</option>
+        {% for val,label in delivery_choices %}
+          <option value="{{ val }}" {% if delivery_filter == val %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+
+      <label style="font-weight:800;color:var(--muted);">Дата с</label>
+      <input type="date" name="date_from" value="{{ date_from }}" class="f__input" style="min-width:150px;">
+
+      <label style="font-weight:800;color:var(--muted);">по</label>
+      <input type="date" name="date_to" value="{{ date_to }}" class="f__input" style="min-width:150px;">
+
+      <select name="sort" id="sortSelect" class="f__input" style="min-width:200px;">
+        <option value="created_desc" {% if sort == 'created_desc' %}selected{% endif %}>Дата: новые сначала</option>
+        <option value="created_asc" {% if sort == 'created_asc' %}selected{% endif %}>Дата: старые сначала</option>
+        <option value="total_desc" {% if sort == 'total_desc' %}selected{% endif %}>Сумма: по убыванию</option>
+        <option value="total_asc" {% if sort == 'total_asc' %}selected{% endif %}>Сумма: по возрастанию</option>
+        <option value="status_asc" {% if sort == 'status_asc' %}selected{% endif %}>Статус: A→Z</option>
+        <option value="status_desc" {% if sort == 'status_desc' %}selected{% endif %}>Статус: Z→A</option>
+      </select>
+
+      <div style="display:flex; gap:8px;">
+        <button class="btn btn--yellow" type="submit">Применить</button>
+        <a class="btn" href="{% url 'account_staff_orders_list' %}">Сбросить</a>
+      </div>
+    </form>
+  </div>
+
+  <!-- Список заказов -->
+  {% if orders_page and orders_page.object_list %}
+    {% for order in orders_page.object_list %}
+      <article class="order-card card">
+        <div class="card__head">
+          <div>
+            <h3 class="card__title brand-font">Заказ №{{ order.order_number }}</h3>
+            <div class="order-meta">{{ order.created_at|date:"d.m.Y H:i" }}</div>
+          </div>
+
+          <div class="order-info">
+            <div class="info-row">
+              <span class="info-label">Покупатель</span>
+              <span class="info-value">
+                {% if order.user %}{{ order.user.get_full_name|default:order.user.email }}{% else %}{{ order.first_name }} {{ order.last_name }}{% endif %}
+              </span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Сумма</span>
+              <span class="info-value order-sum">{{ order.total|floatformat:0 }} ƃ</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="order-body">
+          <div class="order-preview">
+            {% for item in order.items.all|slice:":3" %}
+              <div class="order-item-mini">
+                <div class="order-item-mini__img">
+                  {% if item.product and item.product.image %}
+                    <img src="{{ item.product.image.url }}" alt="{{ item.product_name }}">
+                  {% endif %}
+                </div>
+                <div class="order-item-mini__meta">
+                  <div class="name">{{ item.product_name }}</div>
+                  <div class="qty">x{{ item.quantity }}</div>
+                </div>
+              </div>
+            {% endfor %}
+            {% if order.items.count > 3 %}
+              <div class="order-more">+{{ order.items.count|add:"-3" }} ещё</div>
+            {% endif %}
+          </div>
+
+          <div class="order-info">
+            <div class="info-row">
+              <span class="info-label">Статус</span>
+              <span class="info-value"><span class="order-badge {{ order.status|upper }}">{{ order.get_status_display }}</span></span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Доставка</span>
+              <span class="info-value">{{ order.get_delivery_type_display }}</span>
+            </div>
+
+            <div style="margin-top:8px;">
+              <select class="order-status-select f__input" data-order-id="{{ order.id }}">
+                {% for val,label in status_choices %}
+                  <option value="{{ val }}" {% if order.status == val %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="card__actions">
+          <a class="btn btn--yellow" href="{% url 'account_staff_order_detail' order.id %}">Открыть</a>
+        </div>
+      </article>
+    {% endfor %}
+
+    <div class="pagination-wrap card">
+      <div class="pagination">
+        {% if orders_page.has_previous %}
+          <a class="card__link" href="?{% if q %}q={{ q }}&amp;{% endif %}{% if status_filter %}status={{ status_filter }}&amp;{% endif %}{% if delivery_filter %}delivery={{ delivery_filter }}&amp;{% endif %}{% if date_from %}date_from={{ date_from }}&amp;{% endif %}{% if date_to %}date_to={{ date_to }}&amp;{% endif %}page={{ orders_page.previous_page_number }}">← Назад</a>
+        {% endif %}
+        <span class="page-indicator">Страница {{ orders_page.number }} из {{ orders_page.paginator.num_pages }}</span>
+        {% if orders_page.has_next %}
+          <a class="card__link" href="?{% if q %}q={{ q }}&amp;{% endif %}{% if status_filter %}status={{ status_filter }}&amp;{% endif %}{% if delivery_filter %}delivery={{ delivery_filter }}&amp;{% endif %}{% if date_from %}date_from={{ date_from }}&amp;{% endif %}{% if date_to %}date_to={{ date_to }}&amp;{% endif %}page={{ orders_page.next_page_number }}">Далее →</a>
+        {% endif %}
+      </div>
+    </div>
+  {% else %}
+    <div class="card">
+      <h2 class="card__title">Нет заказов</h2>
+    </div>
+  {% endif %}
+</div>
+
+<script src="{% static 'js/account-staff-orders.js' %}" defer></script>
+<script>
+  // submit form on sort change for convenience
+  document.addEventListener('DOMContentLoaded', function () {
+    const sort = document.getElementById('sortSelect');
+    const form = document.getElementById('filtersForm');
+    if (sort && form) {
+      sort.addEventListener('change', function () { form.submit(); });
+    }
+  });
+</script>
+{% endblock %}

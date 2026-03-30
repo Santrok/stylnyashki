@@ -23,21 +23,29 @@
             <i class="fas fa-id-card account-nav__icon" aria-hidden="true"></i>
             <span>Мой профиль</span>
           </a>
-
+            {% if not user.is_staff %}
           <a class="account-nav__item {% block nav_addresses_active %}{% endblock %}" href="{% url 'account_addresses' %}">
             <i class="fas fa-map-marker-alt account-nav__icon" aria-hidden="true"></i>
             <span>Адреса</span>
           </a>
-
+            {% endif %}
+            {% if user.is_staff %}
+            <a class="account-nav__item {% block nav_orders_staff_active %}{% endblock %}" href="{% url 'account_staff_orders_list' %}">
+            <i class="fas fa-box-open account-nav__icon" aria-hidden="true"></i>
+            <span>Заказы</span>
+          </a>
+            {% else %}
           <a class="account-nav__item {% block nav_orders_active %}{% endblock %}" href="{% url 'account_orders' %}">
             <i class="fas fa-box-open account-nav__icon" aria-hidden="true"></i>
             <span>Мои заказы</span>
           </a>
-
+            {% endif%}
+            {% if not user.is_staff %}
           <a class="account-nav__item {% block nav_fav_active %}{% endblock %}" href="{% url 'account_favorites' %}">
             <i class="far fa-heart account-nav__icon" aria-hidden="true"></i>
             <span>Избранное</span>
           </a>
+            {% endif %}
 
           {#<a class="account-nav__item {% block nav_kids_active %}{% endblock %}" href="#">#}
             {#<i class="fas fa-child account-nav__icon" aria-hidden="true"></i>#}
@@ -46,7 +54,7 @@
             {% if user.is_staff %}
           <a class="account-nav__item {% block nav_settings_active %}{% endblock %}" href="{% url 'account_product' %}">
             <i class="fas fa-cog account-nav__icon" aria-hidden="true"></i>
-            <span>Создание продуктов</span>
+            <span>Добавление товаров</span>
           </a>
             {% endif %}
         </nav>

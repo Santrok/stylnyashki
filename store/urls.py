@@ -32,6 +32,11 @@ urlpatterns = [
     path('account/favorites/remove/<int:item_id>/', views.favorite_remove_view, name='favorite_remove'),
     path('account/favorites/add-to-cart/<int:item_id>/', views.favorite_add_to_cart_view, name='favorite_add_to_cart'),
     path('account/products/bulk-upload/', views.products_bulk_upload_view, name='account_product'),
+    path('account/staff/orders/', views.AccountStaffOrdersListView.as_view(), name='account_staff_orders_list'),
+    path('account/staff/orders/<int:pk>/', views.AccountStaffOrderDetailView.as_view(),
+         name='account_staff_order_detail'),
+    path('account/staff/orders/<int:pk>/status/', views.account_order_status_update,
+         name='account_staff_order_status_update'),
 
     # Cart actions
     path('cart/add/<int:product_id>/', views.cart_add, name='cart_add'),

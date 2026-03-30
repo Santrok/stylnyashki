@@ -400,3 +400,11 @@ class ProductBulkForm(forms.ModelForm):
             "is_active": "Активен",
             "status": "Статус",
         }
+
+class OrderStatusForm(forms.ModelForm):
+    class Meta:
+        model = Order
+        fields = ['status']
+        widgets = {
+            'status': forms.Select(attrs={'class': 'f__input', 'id': 'id_status'}),
+        }
