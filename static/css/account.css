@@ -666,77 +666,39 @@ select.f__input:disabled {
 
 /* ========== File input: два варианта ========== */
 
-/* Вариант A: попытаться стилизовать нативный file-button (современные браузеры) */
-input[type="file"] {
-  font-family: inherit;
-  color: inherit;
-}
-
-/* Modern browsers */
-input[type="file"]::file-selector-button {
-  -webkit-appearance: none;
-  appearance: none;
-  margin-right: 12px;
-  border: 0;
-  padding: 8px 12px;
-  border-radius: 10px;
-  background: var(--purple);
-  color: #fff;
-  font-weight: 900;
-  cursor: pointer;
-}
-input[type="file"]::file-selector-button:hover {
-  filter: brightness(0.95);
-}
-
-/* WebKit legacy */
-input[type="file"]::-webkit-file-upload-button {
-  -webkit-appearance: none;
-  appearance: none;
-  border: 0;
-  padding: 8px 12px;
-  border-radius: 10px;
-  background: var(--purple);
-  color: #fff;
-  font-weight: 900;
-  cursor: pointer;
-}
-
-/* Но на iOS Safari эти селекторы могут проигнорироваться — поэтому рекомендую Вариант B */
-
-/* Вариант B: кастомный обёртка+label для file input (рекомендуемый) */
+/* Скрываем реальный input вне экрана — он доступен для скринридеров */
 .file-input {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-}
-.file-input__button {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 14px;
-  border-radius: 12px;
-  background: var(--purple);
-  color: #fff;
-  font-weight: 900;
-  cursor: pointer;
-  border: 0;
-}
-.file-input__button:hover { filter: brightness(0.98); }
-.file-input__names {
-  color: var(--muted);
-  font-weight: 700;
-  font-size: 13px;
-  word-break: break-word;
-  max-width: 60%;
+    margin-top: 14px;
 }
 
-/* позиционирование реального input: скрываем визуально, но оставляем для доступности */
-.file-input input[type="file"] {
+.file-input__real {
   position: absolute;
   left: -9999px;
   width: 1px;
   height: 1px;
   opacity: 0;
   pointer-events: none;
+}
+
+/* Видимая кнопка (стилизована как остальные поля) */
+.file-input__button {
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding:10px 14px;
+  border-radius:12px;
+  background:var(--purple);
+  color:#fff;
+  font-weight:900;
+  cursor:pointer;
+  border:0;
+  font-size:14px;
+}
+.file-input__button:active{ transform: translateY(1px); }
+.file-input__names {
+  margin-left:12px;
+  color:var(--muted);
+  font-weight:700;
+  max-width:55%;
+  word-break:break-word;
 }

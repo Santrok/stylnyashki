@@ -61,16 +61,11 @@
       </div>
     </div>
 
-    <div class="file-input" style="position:relative; margin-top:14px;">
-  <!-- скрытый реальный input -->
-  <input type="file" id="imagesInput" name="images" multiple accept="image/*" aria-hidden="true">
-
-  <!-- label действует как кнопка -->
+    <div class="file-input" aria-live="polite">
+  <input type="file" id="imagesInput" name="images" multiple accept="image/*" class="file-input__real" />
   <label for="imagesInput" class="file-input__button" role="button" aria-controls="imagesInput">
-    <span>Выбрать файлы</span>
+    <span class="file-input__btn-text">Выбрать файлы</span>
   </label>
-
-  <!-- место для показа выбранных имён / счётчика -->
   <div id="filesCount" class="file-input__names">Выбрано файлов: 0</div>
 </div>
 
