@@ -9,6 +9,8 @@ from mptt.admin import DraggableMPTTAdmin
 from mptt.fields import TreeForeignKey
 from mptt.models import MPTTModel
 
+from .utils import convert_image_to_avif
+
 User = get_user_model()
 
 
@@ -121,6 +123,12 @@ class Product(models.Model):
             return round(self.price * (1 - factor), 2)
         return self.price
 
+    def save(self, *args, **kwargs):
+
+        if self.image and not self.image.url.lower().endswith('avif'):
+            convert_image_to_avif(photo=self.image)
+
+        super().save(*args, **kwargs)
 
 class Cart(models.Model):
     """Shopping cart tied to a user session or authenticated user."""

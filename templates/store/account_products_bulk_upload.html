@@ -1,0 +1,87 @@
+{% extends "store/account_base.html" %}
+{% load static %}
+
+{% block extra_head_double %}
+<link rel="stylesheet" href="{% static 'css/account-bulk-upload.css' %}">
+{% endblock %}
+
+{% block account_title %}Массовая загрузка товаров{% endblock %}
+
+{% block account_content %}
+<div class="card">
+  <div class="card__head">
+    <h2 class="card__title">Массовая загрузка товаров</h2>
+  </div>
+
+  <form id="bulkUploadForm" onsubmit="return false;">
+    <div class="form-grid">
+      <div>
+        {{ form.name.label_tag }}
+        {{ form.name }}
+      </div>
+
+      <div>
+        {{ form.brand.label_tag }}
+        {{ form.brand }}
+      </div>
+
+      <div>
+        {{ form.category.label_tag }}
+        {{ form.category }}
+      </div>
+
+      <div>
+        {{ form.season.label_tag }}
+        {{ form.season }}
+      </div>
+
+      <div>
+        {{ form.price.label_tag }}
+        {{ form.price }}
+      </div>
+
+      <div>
+        {{ form.discount.label_tag }}
+        {{ form.discount }}
+      </div>
+
+      <div>
+        <label class="f__label">Размеры (multi)</label>
+        {{ form.sizes }}
+      </div>
+
+      <div>
+        <label class="f__label">Активен</label><br>
+        {{ form.is_active }}
+      </div>
+
+      <div style="grid-column: 1 / -1;">
+        {{ form.status.label_tag }}
+        {{ form.status }}
+      </div>
+    </div>
+
+    <div style="margin-top:12px;">
+      <label class="f__label">Изображения (можно выбрать несколько, до ~150)</label>
+      <input type="file" id="imagesInput" multiple accept="image/*" capture="environment">
+      <div id="filesCount" style="margin-top:8px;color:#6b7280;"></div>
+    </div>
+
+    <div style="margin-top:14px;">
+      <button id="startUploadBtn" type="button" class="btn btn--yellow">Начать загрузку</button>
+      <span id="uploadStatus" style="margin-left:12px;"></span>
+    </div>
+
+    <div id="progressWrap" style="margin-top:14px; display:none;">
+      <div style="height:10px; background:#eee; border-radius:6px; overflow:hidden;">
+        <div id="progressBar" style="height:100%; width:0%; background:var(--purple); transition:width .25s;"></div>
+      </div>
+      <div id="progressText" style="margin-top:8px; color:#6b7280;"></div>
+    </div>
+  </form>
+
+  <div id="resultArea" style="margin-top:14px;"></div>
+</div>
+
+<script src="{% static 'js/bulk-upload.js' %}" defer></script>
+{% endblock %}

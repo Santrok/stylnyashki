@@ -39,15 +39,16 @@
             <span>Избранное</span>
           </a>
 
-          <a class="account-nav__item {% block nav_kids_active %}{% endblock %}" href="#">
-            <i class="fas fa-child account-nav__icon" aria-hidden="true"></i>
-            <span>Мои дети</span>
-          </a>
-
-          <a class="account-nav__item {% block nav_settings_active %}{% endblock %}" href="#">
+          {#<a class="account-nav__item {% block nav_kids_active %}{% endblock %}" href="#">#}
+            {#<i class="fas fa-child account-nav__icon" aria-hidden="true"></i>#}
+            {#<span>Мои дети</span>#}
+          {#</a>#}
+            {% if user.is_staff %}
+          <a class="account-nav__item {% block nav_settings_active %}{% endblock %}" href="{% url 'account_product' %}">
             <i class="fas fa-cog account-nav__icon" aria-hidden="true"></i>
-            <span>Настройки</span>
+            <span>Создание продуктов</span>
           </a>
+            {% endif %}
         </nav>
 
         <div class="account-sidebar__foot">

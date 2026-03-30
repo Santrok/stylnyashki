@@ -621,7 +621,7 @@ body.menu-open{ overflow:hidden; }
   box-shadow: 0 2px 8px rgba(0,0,0,0.12);
   color:#9ca3af;
   cursor:pointer;
-  opacity:0;
+  opacity:1;
   transition: opacity .2s ease, color .2s ease;
 }
 .p-card:hover .p-card__fav{ opacity:1; }

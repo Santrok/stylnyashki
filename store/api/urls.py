@@ -1,5 +1,6 @@
 from django.urls import path
 from . import views
+from .views import BulkProductUploadAPIView
 
 urlpatterns = [
     path("cart/", views.CartRetrieveAPIView.as_view(), name="api_cart"),
@@ -11,5 +12,7 @@ urlpatterns = [
     path("favorites/toggle/", views.FavoritesToggleAPIView.as_view(), name="api_favorites_toggle"),
 
     path("state/", views.UserStateAPIView.as_view(), name="api_state"),
-    path("cart/toggle/", views.CartToggleAPIView.as_view(), name="api_cart_toggle")
+    path("cart/toggle/", views.CartToggleAPIView.as_view(), name="api_cart_toggle"),
+
+    path('staff/products/bulk-upload/', BulkProductUploadAPIView.as_view(), name='api_products_bulk_upload'),
 ]

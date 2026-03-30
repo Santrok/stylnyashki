@@ -1,0 +1,5 @@
+/* account-bulk-upload.css - minimal styles */
+#imagesInput { width: 100%; }
+#progressText { color: #6b7280; font-weight: 700; }
+pre { background: #f8f8f8; padding: 12px; border-radius: 8px; overflow:auto; max-height:300px; }
+#filesCount { font-weight: 700; color: #4b5563; }

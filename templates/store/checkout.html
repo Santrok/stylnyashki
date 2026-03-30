@@ -15,7 +15,7 @@
             <div class="co-bc">
                 <a class="co-bc__link" href="{% url 'home' %}">Главная</a>
                 <i class="fas fa-chevron-right co-bc__sep" aria-hidden="true"></i>
-                <a class="co-bc__link" href="{% url 'cart' %}">Кор��ина</a>
+                <a class="co-bc__link" href="{% url 'cart' %}">Корзина</a>
                 <i class="fas fa-chevron-right co-bc__sep" aria-hidden="true"></i>
                 <span class="co-bc__current">Оформление заказа</span>
             </div>
@@ -151,7 +151,6 @@
                   <i class="fas fa-truck" aria-hidden="true"></i>
                   <span>Белпочта</span>
                 </span>
-                                <span class="co-delivery-btn__badge">от 350₽</span>
                             </label>
 
                             <label class="co-delivery-btn">
@@ -302,7 +301,7 @@
                                     </p>
                                 </div>
 
-                                <p class="co-sitem__price">{{ it.subtotal }} BYN</p>
+                                <p class="co-sitem__price">{{ it.subtotal }} <span class="by-currency">ƃ</span></p>
                             </div>
                             {% empty %}
     <p class="co-note" style="text-align:left;margin:0;">Корзина пуста.</p>
@@ -313,17 +312,13 @@
                             <div class="co-total">
                                 <div class="co-total__row">
                                     <span>Товары</span>
-                                    <span>{{ total_sum }} BYN</span>
-                                </div>
-                                <div class="co-total__row">
-                                    <span>Доставка</span>
-                                    <span>{{ delivery_price|default:"0.00" }} BYN</span>
+                                    <span>{{ total_sum }} <span class="by-currency">ƃ</span></span>
                                 </div>
                             </div>
 
                             <div class="co-grand">
                                 <span>Итого</span>
-                                <span class="co-grand__value">{{ total_with_delivery|default:total_sum }} BYN</span>
+                                <span class="co-grand__value by-currency">{{ total_with_delivery|default:total_sum }} <span>ƃ</span></span>
                             </div>
 
                             <!-- КНОПКА ПЕРЕНЕСЕНА СЮДА -->

@@ -9,6 +9,7 @@ from django.conf import settings
 from datetime import timedelta
 from decimal import Decimal
 
+from django.contrib.admin.views.decorators import staff_member_required
 from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
 from django.db import transaction
 from django.shortcuts import render, redirect, get_object_or_404
@@ -26,7 +27,8 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticatedOrReadOnly
 
-from .forms import RegisterForm, LoginForm, AccountForm, PostalAddressForm, EuropostAddressForm, CheckoutForm
+from .forms import RegisterForm, LoginForm, AccountForm, PostalAddressForm, EuropostAddressForm, CheckoutForm, \
+    ProductBulkForm
 from .models import Product, SizeOption, Cart, CartItem, Category, Address, Order, OrderItem, FavoriteItem
 from .serializers import (
     ProductSerializer, ProductListSerializer,
@@ -734,6 +736,104 @@ def cart_remove(request, item_id):
     cart = get_or_create_cart(request)
     CartItem.objects.filter(pk=item_id, cart=cart).delete()
     return redirect('cart')
+
+
+# @staff_member_required
+def products_bulk_upload_view(request):
+    """
+    Mobile-friendly bulk upload view (staff only).
+    Expected POST (multipart/form-data):
+      - name (required)
+      - brand (optional)
+      - category_id (optional)  -- integer id of Category
+      - season (optional)
+      - price (optional, decimal)
+      - discount (optional)
+      - is_active (optional, "1"/"on" means True)
+      - status (optional; default available)
+      - sizes[] (optional list of SizeOption ids)
+      - images[] (multiple file inputs)
+    For large uploads frontend should send files in batches (JS below does that).
+    Returns JSON: {"created": n, "errors": [...]}
+    """
+    categories = Category.objects.all()[:200]
+    sizes = SizeOption.objects.all()
+    form = ProductBulkForm()
+    return render(request, "store/account_products_bulk_upload.html", {"categories2": categories, "sizes": sizes, "form": form})
+
+    # # POST processing: support both AJAX fetch and form POST; always return JSON for batches
+    # if not request.FILES:
+    #     return JsonResponse({"created": 0, "errors": ["No files uploaded"]}, status=400)
+    #
+    # # Read common fields
+    # name = request.POST.get("name", "").strip()
+    # if not name:
+    #     return JsonResponse({"created": 0, "errors": ["Field 'name' is required"]}, status=400)
+    #
+    # brand = request.POST.get("brand") or None
+    # category_id = request.POST.get("category_id")
+    # season = request.POST.get("season") or None
+    # price = request.POST.get("price")
+    # discount = request.POST.get("discount") or 0
+    # status = request.POST.get("status") or Product.Status.AVAILABLE
+    # is_active = request.POST.get("is_active", "1") in ("1", "true", "on")
+    # sizes_ids = request.POST.getlist("sizes")  # list of strings
+    #
+    # # Resolve category and sizes
+    # category = None
+    # if category_id:
+    #     try:
+    #         category = Category.objects.get(id=int(category_id))
+    #     except Exception:
+    #         return JsonResponse({"created": 0, "errors": [f"Category id {category_id} not found"]}, status=400)
+    #
+    # sizes_qs = SizeOption.objects.filter(id__in=sizes_ids) if sizes_ids else None
+    #
+    # images = request.FILES.getlist("images")
+    # created_products = []
+    # errors = []
+    #
+    # # base name for files: slug(name) + timestamp prefix to make filenames unique
+    # base_safe = slugify(name) or "product"
+    # timestamp = int(time.time())
+    #
+    # for idx, uploaded in enumerate(images):
+    #     try:
+    #         # process image (resize + avif)
+    #         file_root = f"{base_safe}-{timestamp}-{idx}"
+    #         filename, contentfile = process_image_to_avif_and_resize(uploaded, base_name=file_root)
+    #
+    #         # create product (without image saved yet)
+    #         p = Product(
+    #             name=name,
+    #             brand=brand,
+    #             category=category,
+    #             season=season,
+    #             price=price if price else Product._meta.get_field("price").get_default(),
+    #             discount=int(discount) if discount else 0,
+    #             is_active=is_active,
+    #             status=status,
+    #         )
+    #         p.save()  # need primary key to attach M2M sizes
+    #
+    #         if sizes_qs:
+    #             p.sizes.set(sizes_qs)
+    #
+    #         # Save image to ImageField
+    #         p.image.save(filename, contentfile, save=True)
+    #
+    #         created_products.append(p.id)
+    #     except Exception as e:
+    #         # ensure partial object cleanup if created
+    #         try:
+    #             p  # noqa: F841
+    #             if hasattr(p, "pk") and p.pk:
+    #                 p.delete()
+    #         except Exception:
+    #             pass
+    #         errors.append({"index": idx, "filename": getattr(uploaded, "name", ""), "error": str(e)})
+    #
+    # return JsonResponse({"created": len(created_products), "created_ids": created_products, "errors": errors})
 
 
 # ---------------------------------------------------------------------------
