@@ -612,3 +612,131 @@ html, body {
   max-width: 100%;
   overflow-x: hidden;
 }
+
+
+/* ========== Стили для единого вида select и file input ========== */
+
+/* общие поля (у вас уже .f__input) — убедитесь, что select получает тот же класс */
+select.f__input,
+select.form-control,
+select {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background-color: var(--white);
+  border: 1px solid var(--border);
+  padding: 10px 44px 10px 12px; /* место справа для стрелки */
+  border-radius: 12px;
+  color: var(--text);
+  font-weight: 700;
+  font-size: 14px;
+  line-height: 1.2;
+  width: 100%;
+  box-sizing: border-box;
+  transition: border-color .15s, box-shadow .15s;
+}
+
+/* focus для select */
+select.f__input:focus,
+select:focus {
+  outline: none;
+  border-color: var(--purple);
+  box-shadow: 0 0 0 4px rgba(201,66,132,0.08);
+}
+
+/* собственная стрелка (SVG data-uri) */
+select.f__input {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='8' viewBox='0 0 14 8'%3E%3Cpath fill='%236b7280' d='M7 8L0 0h14z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 14px 8px;
+}
+
+/* Небольшая корректировка для iOS (иногда нужен padding справа больше) */
+@supports (-webkit-touch-callout: none) {
+  select.f__input { padding-right: 48px; }
+}
+
+/* Если нужен disabled вид */
+select.f__input[disabled],
+select.f__input:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+/* ========== File input: два варианта ========== */
+
+/* Вариант A: попытаться стилизовать нативный file-button (современные браузеры) */
+input[type="file"] {
+  font-family: inherit;
+  color: inherit;
+}
+
+/* Modern browsers */
+input[type="file"]::file-selector-button {
+  -webkit-appearance: none;
+  appearance: none;
+  margin-right: 12px;
+  border: 0;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: var(--purple);
+  color: #fff;
+  font-weight: 900;
+  cursor: pointer;
+}
+input[type="file"]::file-selector-button:hover {
+  filter: brightness(0.95);
+}
+
+/* WebKit legacy */
+input[type="file"]::-webkit-file-upload-button {
+  -webkit-appearance: none;
+  appearance: none;
+  border: 0;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: var(--purple);
+  color: #fff;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+/* Но на iOS Safari эти селекторы могут проигнорироваться — поэтому рекомендую Вариант B */
+
+/* Вариант B: кастомный обёртка+label для file input (рекомендуемый) */
+.file-input {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.file-input__button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: var(--purple);
+  color: #fff;
+  font-weight: 900;
+  cursor: pointer;
+  border: 0;
+}
+.file-input__button:hover { filter: brightness(0.98); }
+.file-input__names {
+  color: var(--muted);
+  font-weight: 700;
+  font-size: 13px;
+  word-break: break-word;
+  max-width: 60%;
+}
+
+/* позиционирование реального input: скрываем визуально, но оставляем для доступности */
+.file-input input[type="file"] {
+  position: absolute;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}

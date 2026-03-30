@@ -61,11 +61,18 @@
       </div>
     </div>
 
-    <div style="margin-top:12px;">
-      <label class="f__label">Изображения (можно выбрать несколько, до ~150)</label>
-      <input type="file" id="imagesInput" multiple accept="image/*">
-      <div id="filesCount" style="margin-top:8px;color:#6b7280;"></div>
-    </div>
+    <div class="file-input" style="position:relative; margin-top:14px;">
+  <!-- скрытый реальный input -->
+  <input type="file" id="imagesInput" name="images" multiple accept="image/*" aria-hidden="true">
+
+  <!-- label действует как кнопка -->
+  <label for="imagesInput" class="file-input__button" role="button" aria-controls="imagesInput">
+    <span>Выбрать файлы</span>
+  </label>
+
+  <!-- место для показа выбранных имён / счётчика -->
+  <div id="filesCount" class="file-input__names">Выбрано файлов: 0</div>
+</div>
 
     <div style="margin-top:14px;">
       <button id="startUploadBtn" type="button" class="btn btn--yellow">Начать загрузку</button>
