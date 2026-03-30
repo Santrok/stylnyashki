@@ -715,3 +715,63 @@ body.menu-open{ overflow:hidden; }
   background: var(--purple);
   opacity: .92;
 }
+
+
+/* Центрирование иконок в круглых кнопках карточки товара */
+.p-card__fav,
+.p-card__cart {
+  /* размеры круга — подбери под свой дизайн */
+  width: 36px;
+  height: 36px;
+
+  /* делаем ровный круг и центрируем содержимое через flex */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+
+  /* сбрасываем внутренние отступы, чтобы не было сдвигов */
+  padding: 0;
+  margin: 0;
+
+  /* гарантия, что box-sizing не добавит неожиданных размеров */
+  box-sizing: border-box;
+
+  /* отключаем границы/фон по умолчанию, если они были заданы иначе */
+  /*border: none;*/
+  /*background: transparent;*/
+}
+
+/* Иконка внутри — делаем block и убираем line-height/смещения */
+.p-card__fav i,
+.p-card__cart i {
+  display: block;          /* убирает inline-особенности */
+  line-height: 1;          /* гарантирует вертикальную центровку */
+  font-size: 18px;         /* подбери желаемый размер */
+  width: auto;
+  height: auto;
+  margin: 0;
+  padding: 0;
+  text-align: center;
+  -webkit-font-smoothing: antialiased; /* улучшает рендер на iOS */
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Если у иконки есть псевдоэлементы, убедимся, что они не влияют */
+.p-card__fav i::before,
+.p-card__cart i::before {
+  display: inline-block;
+  transform: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* Небольшая корректировка для старых WebKit (если всё ещё видно мелкое смещение) */
+@supports (-webkit-overflow-scrolling: touch) {
+  .p-card__fav i,
+  .p-card__cart i {
+    /* тонкая подстройка по вертикали/горизонтали при необходимости:
+       попробуй сначала без transform; если смещение осталось — раскомментируй. */
+    /* transform: translateY(-0.2px) translateX(0); */
+  }
+}
