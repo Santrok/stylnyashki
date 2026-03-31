@@ -1,14 +1,77 @@
-<footer class="footer">
-  <div class="container footer__inner">
-    <div class="footer__links">
-      <span>© {% now "Y" %} Стильняшки</span>
-      <a href="#">Политика конфиденциальности</a>
-      <a href="#">Публичная оферта</a>
+{# templates/partials/footer.html #}
+{% load static %}
+<footer class="site-footer" role="contentinfo" aria-label="Футер сайта">
+  <div class="site-footer__inner container">
+
+    {# В верхней части: повтор меню + разделы с реквизитами и контактами #}
+    <div class="site-footer__top">
+      <nav class="footer-nav" aria-label="Навигация в футере">
+        {# дублируем основное меню; замените href на реальные урлы #}
+        <a href="{% url 'catalog' %}">Каталог</a>
+        <a href="#">О компании</a>
+        <a href=#">Контакты</a>
+        <a href="#">Помощь</a>
+      </nav>
     </div>
-    <div class="footer__social">
-      <a href="#" aria-label="VK"><i class="fab fa-vk"></i></a>
-      <a href="#" aria-label="Telegram"><i class="fab fa-telegram"></i></a>
-      <a href="#" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
+
+    <hr class="site-footer__sep">
+
+    <div class="site-footer__grid">
+      <div class="footer-col footer-col--left">
+        {% if company_info %}
+          <div class="company-name">{{ company_info.name }}</div>
+        {% else %}
+          <div class="company-name">ООО «Стильняшки»</div>
+        {% endif %}
+
+        <div class="company-line">
+          <span class="company-label">УНП:</span>
+          <span class="company-value">{% if company_info %}{{ company_info.inn }}{% else %}123456789{% endif %}</span>
+        </div>
+
+        <div class="company-reg">
+          {% if company_info and company_info.registration_note %}
+            {{ company_info.registration_note }}
+          {% else %}
+            Номер свидетельства о государственной регистрации №123456789 от 01.01.2020. Режим работы офиса: ежедневно с 9:00 до 21:00.
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="footer-col footer-col--center">
+        <div class="company-legal">
+          <div class="company-label">Юридический адрес:</div>
+          <div class="company-value">
+            {% if company_info %}{{ company_info.legal_address }}{% else %}г. Москва, ул. Примерная, д. 1, индекс: 123456{% endif %}
+          </div>
+        </div>
+      </div>
+
+      <div class="footer-col footer-col--right">
+        <div class="contacts">
+          <a class="phone" href="tel:{% if company_info %}{{ company_info.phone }}{% else %}+7-495-000-00-00{% endif %}">
+            {% if company_info %}{{ company_info.phone }}{% else %}+7 (495) 000-00-00{% endif %}
+          </a>
+          <a class="email" href="mailto:{% if company_info %}{{ company_info.email }}{% else %}info@example.ru{% endif %}">
+            {% if company_info %}{{ company_info.email }}{% else %}info@example.ru{% endif %}
+          </a>
+        </div>
+
+        <div class="footer-links">
+          <a href="#">Политика конфиденциальности</a>
+          <a href="#">Публичная оферта</a>
+        </div>
+      </div>
     </div>
+
+    {# нижняя полоса: платёжные/сервисные логотипы (по центру) #}
+    <div class="site-footer__payments">
+      <div class="payments-inner">
+        {# Помести логотипы файлов в static/img/payments/ (пример ниже) #}
+        <img src="{% static 'img/payment.png' %}" alt="Payment" class="pay-icon">
+        {# добавьте/удалите иконки по необходимости #}
+      </div>
+    </div>
+
   </div>
 </footer>

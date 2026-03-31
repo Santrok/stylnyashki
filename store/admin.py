@@ -3,7 +3,7 @@
 from django.contrib import admin
 from mptt.admin import DraggableMPTTAdmin
 
-from .models import Product, SizeOption, Cart, CartItem, Category, Order
+from .models import Product, SizeOption, Cart, CartItem, Category, Order, CompanyInfo
 
 
 @admin.register(SizeOption)
@@ -65,3 +65,18 @@ class CategoryAdmin(DraggableMPTTAdmin):
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
     pass
+
+@admin.register(CompanyInfo)
+class CompanyInfoAdmin(admin.ModelAdmin):
+    list_display = ("name", "phone", "email", "updated_at")
+    readonly_fields = ("updated_at",)
+
+    def has_add_permission(self, request):
+        # Allow add only if there is no instance yet
+        if CompanyInfo.objects.exists():
+            return False
+        return super().has_add_permission(request)
+
+    def has_delete_permission(self, request, obj=None):
+        # Prevent deletion via admin to keep at least one set of details
+        return False

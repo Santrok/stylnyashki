@@ -1,4 +1,4 @@
-from .models import Category
+from .models import Category, CompanyInfo
 from .services.cart import get_or_create_cart
 from .services.favorites import get_or_create_favorite
 
@@ -31,3 +31,10 @@ def header_categories(request):
     return {
         "categories": categories,
     }
+
+def company_info(request):
+    """
+    Adds company info (first CompanyInfo instance or None) to template context.
+    """
+    info = CompanyInfo.objects.first()
+    return {"company_info": info}

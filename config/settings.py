@@ -55,6 +55,7 @@ TEMPLATES = [
                 'django.contrib.messages.context_processors.messages',
                 "store.context_processors.header_counts",
                 "store.context_processors.header_categories",
+                'store.context_processors.company_info',
             ],
         },
     },
@@ -126,6 +127,5 @@ EMAIL_HOST_USER = env_keys.get("EMAIL_HOST_USER")
 EMAIL_USE_SSL = env_keys.get("EMAIL_USE_SSL")
 
 DEFAULT_FROM_EMAIL = f"Стильняшки <{EMAIL_HOST_USER}>"
-
 
 RESERVE_TTL_MINUTES = 60

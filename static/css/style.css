@@ -797,8 +797,88 @@ body.menu-open{ overflow:hidden; }
   padding-top: var(--header-height);
 }
 
-/* если хочешь, header__inner можно уменьшить вертикальные паддинги,
-   чтобы header не оказался выше ожидаемой высоты — но JS учтёт текущую высоту */
-.header__inner {
-  /* можно оставить как есть; JS корректно вычислит высоту */
+
+/* Footer layout & styles */
+.site-footer {
+  /*background: #fff;*/
+  border-top: 1px solid #e6e6e6;
+  color: #1f2937;
+  font-weight: 700;
+  font-size: 13px;
+  margin-top: 28px;
+  padding: 18px 0 12px;
+}
+
+.site-footer__inner {
+  max-width: 1140px;
+  margin: 0 auto;
+  padding: 0 16px;
+}
+
+.site-footer__top {
+  display:flex;
+  justify-content:flex-start;
+  margin-bottom: 8px;
+}
+
+.footer-nav {
+  display:flex;
+  gap:20px;
+  flex-wrap:wrap;
+  font-weight:800;
+}
+.footer-nav a {
+  color: #1f2937;
+  text-decoration:none;
+}
+.site-footer__sep {
+  border: none;
+  border-top: 1px solid #ddd;
+  margin: 8px 0;
+}
+
+/* three-column grid */
+.site-footer__grid {
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-top: 6px;
+  margin-bottom: 12px;
+}
+
+/* columns */
+.footer-col { flex: 1 1 0; min-width: 220px; }
+.footer-col--left { flex: 1.2; }
+.footer-col--center { flex: 1; }
+.footer-col--right { flex: 0 0 240px; text-align: right; }
+
+/* left column */
+.company-name { font-weight:900; font-size:15px; margin-bottom:6px; }
+.company-line { color: #374151; margin: 6px 0; }
+.company-label { color: #6b7280; font-weight:800; margin-right:6px; }
+.company-reg { color: #6b7280; font-weight:700; margin-top:6px; }
+
+/* center */
+.company-legal .company-label { color:#6b7280; font-weight:800; }
+.company-legal .company-value { color:#374151; font-weight:900; margin-top:4px; }
+
+/* right column */
+.contacts { display:flex; flex-direction:column; align-items:flex-end; gap:6px; }
+.contacts a { color:#1f2937; text-decoration:none; font-weight:900; }
+.footer-links { margin-top:8px; display:flex; gap:12px; flex-direction: column-reverse; justify-content:flex-end; }
+.footer-links a { color:#4a5568; text-decoration:underline; font-weight:700; }
+
+/* payment icons row */
+.site-footer__payments { border-top: 0; margin-top: 8px; padding-top: 10px; display:flex; justify-content:center; }
+.payments-inner { display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+.pay-icon { display:inline-block; opacity:0.95; }
+
+/* responsiveness */
+@media (max-width: 880px) {
+  .site-footer__grid { flex-direction:column; gap:12px; }
+  .footer-col--right { text-align:left; min-width: auto; flex: none; }
+  .contacts { align-items:flex-start; }
+  .footer-links { justify-content:flex-start; }
+  .site-footer__top { display:block; margin-bottom:12px; }
 }

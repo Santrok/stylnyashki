@@ -465,3 +465,31 @@ class OrderItem(models.Model):
     @property
     def line_total(self):
         return (self.price or Decimal("0.00")) * self.quantity
+
+
+class CompanyInfo(models.Model):
+    name = models.CharField("Наименование", max_length=250, default='ООО «Стиль-Няшки»')
+    director = models.CharField("Руководитель", max_length=250, blank=True, default='Макодай А.П.')
+
+    legal_address = models.CharField("Юридический адрес", max_length=512, blank=True, null=True)
+    inn = models.CharField("УНП / ИНН", max_length=64, blank=True, null=True)
+
+    bank_account = models.CharField("Расчетный счет (Р/с)", max_length=128, blank=True, null=True)
+    bank_name = models.CharField("Банк (наименование)", max_length=255, blank=True, null=True)
+    bank_address = models.CharField("Адрес банка", max_length=255, blank=True, null=True)
+    bic = models.CharField("БИК / SWIFT", max_length=64, blank=True, null=True)
+
+    phone = models.CharField("Телефон", max_length=64, blank=True, null=True)
+    email = models.EmailField("Электронная почта", blank=True, null=True)
+
+    registration_note = models.TextField("Сведения о регистрации / режим работы", blank=True, null=True)
+
+    # optional: ordering or timestamps
+    updated_at = models.DateTimeField("Обновлён", auto_now=True)
+
+    class Meta:
+        verbose_name = "Информация о компании"
+        verbose_name_plural = "Информация о компании"
+
+    def __str__(self):
+        return self.name
