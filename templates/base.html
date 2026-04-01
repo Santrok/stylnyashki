@@ -18,6 +18,21 @@
   {# Page-specific css #}
   {% block extra_head %}{% endblock %}
 </head>
+
+<div id="ccBanner" class="cc-banner" aria-live="polite" role="dialog" aria-label="Настройки cookies">
+  <div class="cc-banner__inner container">
+    <div class="cc-banner__text">
+      Сайт использует cookie. Подробная информация и настройки доступны
+      <a href="{% url 'cookie_settings' %}" class="cc-banner__link">здесь</a>
+    </div>
+
+    <div class="cc-banner__actions">
+      <button id="ccRejectBtn" class="btn btn--ghost">Отклонить</button>
+      <button id="ccAcceptBtn" class="btn">Принять</button>
+    </div>
+  </div>
+</div>
+
 <body class="site {% block body_class %}{% endblock %}">
 
   {% include "partials/mobile_menu.html" %}
@@ -126,6 +141,7 @@
       }
     })();
   </script>
+  <script src="{% static '/js/cookie-consent.js' %}"></script>
   <script src="{% static '/js/shop.js' %}"></script>
   <script src="{% static '/js/product_fullscreen_modal.js' %}"></script>
   {% block extra_js %}{% endblock %}

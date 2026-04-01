@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Как и зачем Стиль‑Няшки использует файлы cookie{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'css/cookie-consent.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="cookie-page">
+  <header class="cookie-hero">
+    <div class="container">
+      <h1 class="cookie-hero__title">Как и зачем Стиль‑Няшки использует файлы cookie</h1>
+    </div>
+  </header>
+
+  <main class="container cookie-content">
+    <section class="cookie-section">
+      <h2>Что такое cookie?</h2>
+      <p class="muted">
+        Cookie (куки) — небольшие текстовые файлы на вашем компьютере, где сохраняются данные посещаемых вами сайтов.
+      </p>
+    </section>
+
+    <section class="cookie-section">
+      <h2>Зачем Стиль‑Няшки использует cookie?</h2>
+      <p class="muted">
+        Cookie помогают Стиль‑Няшки запомнить информацию о вас. Например, даже если вы не авторизованы на сайте,
+        мы можем сохранить товары, которые вы добавили в корзину — когда вы вернётесь, они всё ещё будут там.
+      </p>
+      <p class="muted">
+        Используя cookie, мы можем создавать персональные подборки, анализировать поведение на сайте и улучшать сервис.
+      </p>
+    </section>
+
+    <section class="cookie-section">
+      <h2>Какие cookie использует Стиль‑Няшки?</h2>
+      <ul class="muted">
+        <li><strong>Аналитические:</strong> анонимная статистика (Google Analytics и др.) для улучшения сервиса.</li>
+        <li><strong>Технические (необходимые):</strong> сессии, корзина, безопасность — без них сайт не сможет правильно работать.</li>
+      </ul>
+    </section>
+
+    <section class="cookie-section">
+      <h2>Можно ли отключить cookie?</h2>
+      <p class="muted">
+        Да — вы можете управлять настройками cookie внизу на этой странице. Если отключить аналитические cookie,
+        мы не будем собирать анонимную статистику, но базовая работа сайта сохранится. Отключение необходимых cookie
+        может повлиять на работу отдельных функций.
+      </p>
+    </section>
+
+    <form id="cookieSettingsForm" class="cookie-form card">
+      <div class="cookie-form__row">
+        <div class="cookie-form__col">
+          <div class="cookie-form__label">Необходимые файлы cookie</div>
+          <div class="cookie-form__desc muted">Эти файлы необходимы для функционирования сайта и не могут быть отключены.</div>
+        </div>
+        <div class="cookie-form__control">
+          <label class="switch">
+            <input type="checkbox" name="necessary" checked disabled>
+            <span class="slider"></span>
+          </label>
+        </div>
+      </div>
+
+      <div class="cookie-form__row">
+        <div class="cookie-form__col">
+          <div class="cookie-form__label">Аналитические файлы cookie</div>
+          <div class="cookie-form__desc muted">Сбор анонимной статистики посещений для улучшения сервиса.</div>
+        </div>
+        <div class="cookie-form__control">
+          <label class="switch">
+            <input type="checkbox" name="analytics">
+            <span class="slider"></span>
+          </label>
+        </div>
+      </div>
+
+      <div class="cookie-form__actions">
+        <button type="button" id="cookieSaveBtn" class="btn btn--primary">Применить настройки cookie</button>
+        <a href="{% url 'privacy' %}" class="btn btn--ghost">Политика конфиденциальности</a>
+      </div>
+    </form>
+
+    <section class="cookie-section cookie-more">
+      <h3>Подробнее</h3>
+      <p class="muted">Если хотите узнать больше о том, какие данные мы собираем и как их используем — смотрите Политику конфиденциальности.</p>
+    </section>
+  </main>
+</div>
+
+{% endblock %}

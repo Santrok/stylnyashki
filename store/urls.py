@@ -1,6 +1,7 @@
 """URL patterns for the store app."""
 
 from django.urls import path, include
+from django.views.generic import TemplateView
 from rest_framework.routers import DefaultRouter
 from . import views
 
@@ -41,6 +42,10 @@ urlpatterns = [
     # Cart actions
     path('cart/add/<int:product_id>/', views.cart_add, name='cart_add'),
     path('cart/remove/<int:item_id>/', views.cart_remove, name='cart_remove'),
+
+    path('cookie-settings/', TemplateView.as_view(template_name='store/cookie_settings.html'), name='cookie_settings'),
+    path('privacy/', TemplateView.as_view(template_name='store/cookie_settings.html'), name='privacy'),
+    path('public_offer/', TemplateView.as_view(template_name='public_offer.html'), name='public_offer'),
 
     # API
     # path('api/', include(router.urls)),
