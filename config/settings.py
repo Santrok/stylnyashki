@@ -27,6 +27,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
+    'mptt',
     'store',
 ]
 
@@ -129,3 +130,6 @@ EMAIL_USE_SSL = env_keys.get("EMAIL_USE_SSL")
 DEFAULT_FROM_EMAIL = f"Стильняшки <{EMAIL_HOST_USER}>"
 
 RESERVE_TTL_MINUTES = 60
+
+TELEGRAM_BOT_TOKEN = env_keys.get("TELEGRAM_BOT_TOKEN", "")
+TELEGRAM_NEW_ORDER_CHAT_ID = env_keys.get("TELEGRAM_NEW_ORDER_CHAT_ID", "")

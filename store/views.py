@@ -5,6 +5,8 @@ Includes:
 - Server-rendered page views (home, catalog, cart, checkout, account, auth)
 - DRF API viewsets (products, cart)
 """
+from tools.telegram_notification import send_telegram_notification
+import logging
 from django.conf import settings
 from datetime import timedelta
 from decimal import Decimal
@@ -42,6 +44,10 @@ from .serializers import (
 from .services.favorites import get_or_create_favorite
 from .services.merge import merge_cart_on_login, merge_favorites_on_login
 from .utils import _build_pagination_pages
+
+
+
+logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -215,7 +221,7 @@ def checkout_view(request):
 
         # Если среди выбранных есть недоступные по availability — редиректим на страницу unavailable
         not_available_selected = selected_items_qs.exclude(availability=CartItem.Availability.AVAILABLE)
-        print(not_available_selected)
+
 
         if not_available_selected.exists():
             # пометим их RESERVED в корзинах и положим их product ids в сессию
@@ -388,6 +394,12 @@ def checkout_view(request):
 
                 # Пересчёт итогов заказа (если у тебя есть метод)
                 order.recalc_totals(save=True)
+
+                try:
+                    transaction.on_commit(lambda: send_telegram_notification(order, request=request))
+                except Exception:
+                    # на всякий случай логируем; не мешаем оформлению заказа
+                    logger.exception("Failed to schedule telegram notification for order %s", order.pk)
 
             return redirect("checkout_success", public_id=order.public_id)
     else:
@@ -586,7 +598,6 @@ def account_favorites_view(request):
     """
     fav = get_or_create_favorite(request)  # для залогиненного вернёт Favorite.user = request.user
     items_qs = fav.items.select_related("product").order_by("-created_at")
-    print(items_qs)
 
     # Пагинация
     per_page = 12

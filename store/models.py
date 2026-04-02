@@ -83,7 +83,7 @@ class Product(models.Model):
 
     name = models.CharField('Название', max_length=255)
     brand = models.CharField('Бренд', max_length=100, blank=True, null=True)
-    category = models.ForeignKey(Category, on_delete=models.DO_NOTHING, blank=True, null=True)
+    category = models.ForeignKey(Category, on_delete=models.DO_NOTHING, verbose_name="Категория", blank=True, null=True)
     season = models.CharField('Сезон', max_length=50, blank=True, null=True)
     price = models.DecimalField(
         'Цена',

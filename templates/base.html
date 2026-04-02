@@ -3,6 +3,7 @@
 <html lang="ru">
 <head>
   <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
   <title>{% block title %}Стильняшки{% endblock %}</title>
 
@@ -17,7 +18,9 @@
 
   {# Page-specific css #}
   {% block extra_head %}{% endblock %}
+    <link rel="icon" href="{% static 'img/favicon.svg' %}" type="image/svg+xml">
 </head>
+{% block cookie %}
 
 <div id="ccBanner" class="cc-banner" aria-live="polite" role="dialog" aria-label="Настройки cookies">
   <div class="cc-banner__inner container">
@@ -32,6 +35,7 @@
     </div>
   </div>
 </div>
+{% endblock cookie %}
 
 <body class="site {% block body_class %}{% endblock %}">
 

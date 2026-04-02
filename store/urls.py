@@ -3,45 +3,50 @@
 from django.urls import path, include
 from django.views.generic import TemplateView
 from rest_framework.routers import DefaultRouter
-from . import views
 
 from django.contrib.auth import views as auth_views
 
+from .views import ProductViewSet, CartViewSet, home, catalog, cart_page, checkout_view, checkout_success_view, \
+    checkout_unavailable_view, login_view, register_view, logout_view, account_addresses_view, account_view, \
+    account_orders_view, account_order_detail_view, account_favorites_view, favorite_remove_view, \
+    favorite_add_to_cart_view, products_bulk_upload_view, AccountStaffOrdersListView, AccountStaffOrderDetailView, \
+    account_order_status_update, cart_add, cart_remove
+
 router = DefaultRouter()
-router.register('products', views.ProductViewSet, basename='product')
-router.register('cart', views.CartViewSet, basename='cart-api')
+router.register('products', ProductViewSet, basename='product')
+router.register('cart', CartViewSet, basename='cart-api')
 
 urlpatterns = [
     # Pages
-    path('', views.home, name='home'),
-    path('catalog/', views.catalog, name='catalog'),
-    path('cart/', views.cart_page, name='cart'),
+    path('', home, name='home'),
+    path('catalog/', catalog, name='catalog'),
+    path('cart/', cart_page, name='cart'),
 
-    path('checkout/', views.checkout_view, name='checkout'),
-    path("checkout/success/<uuid:public_id>/", views.checkout_success_view, name="checkout_success"),
-    path("checkout/unavailable/", views.checkout_unavailable_view, name="checkout_unavailable"),
+    path('checkout/', checkout_view, name='checkout'),
+    path("checkout/success/<uuid:public_id>/", checkout_success_view, name="checkout_success"),
+    path("checkout/unavailable/", checkout_unavailable_view, name="checkout_unavailable"),
 
-    path('login/', views.login_view, name='login'),
-    path('register/', views.register_view, name='register'),
-    path('logout/', views.logout_view, name='logout'),
+    path('login/', login_view, name='login'),
+    path('register/', register_view, name='register'),
+    path('logout/', logout_view, name='logout'),
 
-    path('account/', views.account_view, name='account'),
-    path("account/addresses/", views.account_addresses_view, name="account_addresses"),
-    path("account/account_orders/", views.account_orders_view, name="account_orders"),
-    path('account/orders/<uuid:public_id>/', views.account_order_detail_view, name='account_order_detail'),
-    path('account/favorites/', views.account_favorites_view, name='account_favorites'),
-    path('account/favorites/remove/<int:item_id>/', views.favorite_remove_view, name='favorite_remove'),
-    path('account/favorites/add-to-cart/<int:item_id>/', views.favorite_add_to_cart_view, name='favorite_add_to_cart'),
-    path('account/products/bulk-upload/', views.products_bulk_upload_view, name='account_product'),
-    path('account/staff/orders/', views.AccountStaffOrdersListView.as_view(), name='account_staff_orders_list'),
-    path('account/staff/orders/<int:pk>/', views.AccountStaffOrderDetailView.as_view(),
+    path('account/', account_view, name='account'),
+    path("account/addresses/", account_addresses_view, name="account_addresses"),
+    path("account/account_orders/", account_orders_view, name="account_orders"),
+    path('account/orders/<uuid:public_id>/', account_order_detail_view, name='account_order_detail'),
+    path('account/favorites/', account_favorites_view, name='account_favorites'),
+    path('account/favorites/remove/<int:item_id>/', favorite_remove_view, name='favorite_remove'),
+    path('account/favorites/add-to-cart/<int:item_id>/', favorite_add_to_cart_view, name='favorite_add_to_cart'),
+    path('account/products/bulk-upload/', products_bulk_upload_view, name='account_product'),
+    path('account/staff/orders/', AccountStaffOrdersListView.as_view(), name='account_staff_orders_list'),
+    path('account/staff/orders/<int:pk>/', AccountStaffOrderDetailView.as_view(),
          name='account_staff_order_detail'),
-    path('account/staff/orders/<int:pk>/status/', views.account_order_status_update,
+    path('account/staff/orders/<int:pk>/status/', account_order_status_update,
          name='account_staff_order_status_update'),
 
     # Cart actions
-    path('cart/add/<int:product_id>/', views.cart_add, name='cart_add'),
-    path('cart/remove/<int:item_id>/', views.cart_remove, name='cart_remove'),
+    path('cart/add/<int:product_id>/', cart_add, name='cart_add'),
+    path('cart/remove/<int:item_id>/', cart_remove, name='cart_remove'),
 
     path('cookie-settings/', TemplateView.as_view(template_name='store/cookie_settings.html'), name='cookie_settings'),
     path('privacy/', TemplateView.as_view(template_name='store/cookie_settings.html'), name='privacy'),
