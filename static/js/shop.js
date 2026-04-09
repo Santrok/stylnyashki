@@ -71,51 +71,90 @@
   /* -----------------------
      Visual helpers for cards / rows / modal
      ----------------------- */
-  function applyCartVisualStateForProduct(pid, in_cart) {
-    // Update all buttons first (they show active state)
-    document.querySelectorAll(`[data-action="toggle-cart"][data-product-id="${pid}"]`)
-      .forEach(btn => setCartActive(btn, in_cart));
+  // улучшенная функция применения визуального состояния с форсом перерисовки
+function applyCartVisualStateForProduct(pid, in_cart) {
+  // сначала обновим state на самих кнопках
+  document.querySelectorAll(`[data-action="toggle-cart"][data-product-id="${pid}"]`)
+    .forEach(btn => setCartActive(btn, in_cart));
 
-    // For each button, update nearest product card (.p-card)
-    document.querySelectorAll(`[data-action="toggle-cart"][data-product-id="${pid}"]`).forEach(btn => {
-      // 1) product card container
-      const card = btn.closest('.p-card');
-      if (card) {
-        card.classList.toggle('is-in-cart', !!in_cart);
-        if (!in_cart) {
+  // затем пройдём по каждой найденной кнопке и обновим контейнеры
+  document.querySelectorAll(`[data-action="toggle-cart"][data-product-id="${pid}"]`).forEach(btn => {
+    // 1) карточка товара
+    const card = btn.closest('.p-card');
+    if (card) {
+      // убираем возможный флаг удаления, чтобы корректно работать при быстром клике
+      card.classList.remove('is-removed');
+
+      // форсируем reflow перед установкой нового состояния,
+      // чтобы мобильный браузер точно применил стили и transition
+      // (чтение свойства вызывает layout flush)
+      void card.offsetWidth;
+
+      // теперь переключаем состояние "в корзине"
+      if (in_cart) {
+        // добавляем класс внутри rAF для плавности
+        requestAnimationFrame(() => {
+          card.classList.add('is-in-cart');
+          // убираем is-removed на случай, если он ещё был
+          card.classList.remove('is-removed');
+        });
+      } else {
+        // удаляем класс is-in-cart и показываем краткую анимацию удаления
+        card.classList.remove('is-in-cart');
+        // small delay чтобы переход сработал корректно (обновление слоя)
+        requestAnimationFrame(() => {
           card.classList.add('is-removed');
-          window.setTimeout(() => card.classList.remove('is-removed'), 450);
-        }
+          // уберём is-removed после анимации
+          window.setTimeout(() => card.classList.remove('is-removed'), 420);
+        });
       }
+    }
 
-      // 2) cart row (mobile / корзина)
-      // Important: ensure your cart row has class .cart-item or attribute data-cart-item="{{ product.id }}" in template
-      const row = btn.closest('.cart-item') || document.querySelector(`[data-cart-item="${pid}"]`);
-      if (row) {
-        row.classList.toggle('is-in-cart', !!in_cart);
-        if (!in_cart) {
+    // 2) строка корзины (mobile) — используем .cart-item или data-cart-item
+    const row = btn.closest('.cart-item') || document.querySelector(`[data-cart-item="${pid}"]`);
+    if (row) {
+      row.classList.remove('is-removed');
+      void row.offsetWidth;
+      if (in_cart) {
+        requestAnimationFrame(() => {
+          row.classList.add('is-in-cart');
+          row.classList.remove('is-removed');
+        });
+      } else {
+        row.classList.remove('is-in-cart');
+        requestAnimationFrame(() => {
           row.classList.add('is-removed');
-          window.setTimeout(() => row.classList.remove('is-removed'), 450);
-        }
+          window.setTimeout(() => row.classList.remove('is-removed'), 420);
+        });
       }
+    }
 
-      // 3) modal panel
-      const pmPanel = document.querySelector('.p-modal.is-open .p-modal__panel') || document.querySelector('#productModal .p-modal__panel');
-      if (pmPanel) {
-        // If the modal contains a button for the same product, toggle panel state
-        const pmBtn = pmPanel.querySelector(`[data-action="toggle-cart"][data-product-id="${pid}"]`);
-        if (pmBtn) {
-          pmPanel.classList.toggle('is-in-cart', !!in_cart);
-          const pmCartText = pmPanel.querySelector('#pmCartText');
-          if (pmCartText) pmCartText.textContent = in_cart ? 'В корзине' : 'В корзину';
-          if (!in_cart) {
+    // 3) модалка: помечаем panel, меняем текст
+    const pmPanel = document.querySelector('.p-modal.is-open .p-modal__panel') || document.querySelector('#productModal .p-modal__panel');
+    if (pmPanel) {
+      const pmBtn = pmPanel.querySelector(`[data-action="toggle-cart"][data-product-id="${pid}"]`);
+      if (pmBtn) {
+        pmPanel.classList.remove('is-removed');
+        void pmPanel.offsetWidth;
+        const pmCartText = pmPanel.querySelector('#pmCartText');
+        if (in_cart) {
+          requestAnimationFrame(() => {
+            pmPanel.classList.add('is-in-cart');
+            if (pmCartText) pmCartText.textContent = 'В корзине';
+            pmPanel.classList.remove('is-removed');
+          });
+        } else {
+          pmPanel.classList.remove('is-in-cart');
+          requestAnimationFrame(() => {
+            if (pmCartText) pmCartText.textContent = 'В корзину';
             pmPanel.classList.add('is-removed');
-            window.setTimeout(() => pmPanel.classList.remove('is-removed'), 450);
-          }
+            window.setTimeout(() => pmPanel.classList.remove('is-removed'), 420);
+          });
         }
       }
-    });
-  }
+    }
+  });
+}
 
   function applyCartStateOnLoad(stateSet) {
     document.querySelectorAll('[data-action="toggle-cart"][data-product-id]').forEach(btn => {

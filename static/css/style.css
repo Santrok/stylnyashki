@@ -985,3 +985,33 @@ body.menu-open{ overflow:hidden; }
 .cart-item.is-in-cart .price-new {
   color: var(--purple);
 }
+
+/* hint браузеру, что фон и трансформация будут меняться — уменьшает баги с визуальным "залипанием" */
+.p-card, .cart-item, [data-cart-item], .p-modal__panel {
+  will-change: background-color, transform, opacity;
+  -webkit-backface-visibility: hidden; /* помогает на iOS WebKit */
+}
+
+/* плавные переходы (если ещё не добавлены) */
+.p-card, .cart-item, [data-cart-item], .p-modal__panel {
+  transition: background-color .22s ease, opacity .22s ease, transform .22s ease;
+}
+
+/* состояние: в корзине — подсветка */
+.p-card.is-in-cart,
+.cart-item.is-in-cart,
+[data-cart-item].is-in-cart,
+.p-modal__panel.is-in-cart {
+  background-color: #FFF6FB; /* розовая подсветка */
+  border-left: 4px solid rgba(201,66,132,0.14);
+}
+
+/* состояние удаления (flash/приглушение) */
+.p-card.is-removed,
+.cart-item.is-removed,
+[data-cart-item].is-removed,
+.p-modal__panel.is-removed {
+  background-color: rgba(17,24,39,0.03);
+  opacity: 0.66;
+  transform: translateX(6px);
+}
