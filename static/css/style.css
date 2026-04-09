@@ -540,9 +540,9 @@ body.menu-open{ overflow:hidden; }
 }
 
 .p-modal__btn--primary{
-  background: var(--purple);
-  border-color: var(--purple);
-  color:#fff;
+  background: var(--yellow);
+  border-color: var(--yellow);
+  color:#000;
 }
 
 /* --- Close animation state (нужен JS: is-leaving + timeout) --- */
@@ -949,6 +949,12 @@ body.menu-open{ overflow:hidden; }
   background-color: #FFF6FB; /* pink highlight */
   border-left: 4px solid rgba(201,66,132,0.14);
 }
+.p-modal__btn--primary.is-in-cart {
+  background: var(--purple);
+  border-color: var(--purple);
+  color:#fff;
+}
+
 
 /* ensure cart button color follows container state */
 .p-card.is-in-cart .p-card__cart,
@@ -967,8 +973,7 @@ body.menu-open{ overflow:hidden; }
 /* removed flash */
 .p-card.is-removed,
 .cart-item.is-removed,
-[data-cart-item].is-removed,
-.p-modal__panel.is-removed {
+[data-cart-item].is-removed {
   background-color: rgba(17,24,39,0.03) !important;
   opacity: 0.66;
   transform: translateX(6px);
