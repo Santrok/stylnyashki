@@ -103,47 +103,140 @@
 </div>
 
   <script>
-    (function () {
-      const overlay = document.getElementById('mobileMenu');
-      const openBtn = document.getElementById('menuOpenBtn');
-      const closeBtn = document.getElementById('menuCloseBtn');
+    Copilot said: Отлично — ниже готовые правки: обновлённый JS
+Отлично — ниже готовые правки: обновлённый JS (заменяет предыдущий mobile menu script) и небольшой CSS‑патч, который делает сам drawer скролящимся. Что добавлено:
 
-      function openMenu() {
-        if (!overlay) return;
-        overlay.classList.add('is-open');
-        overlay.setAttribute('aria-hidden', 'false');
-        if (openBtn) openBtn.setAttribute('aria-expanded', 'true');
-        document.body.classList.add('menu-open');
+Повторный клик по бургеру теперь закрывает меню (toggle).
+При открытии меню блокируем скролл страницы (body.menu-open) и переводим фокус внутрь меню.
+При закрытии фокус возвращаем на бургер.
+Drawer теперь имеет внутренний вертикальный скрол с инерцией (-webkit-overflow-scrolling).
+При касании overlay (вне drawer) скролл страницы блокируется; внутри drawer скролл работает нормально.
+Закрытие по тапу на overlay, по Esc и по элементам с data-close/menu работает как раньше.
+JS — замените текущий mobile menu inline-скрипт на этот (лучше положить в static/js/mobile_menu.js и подключить с defer):
+JavaScript
+// static/js/mobile_menu.js
+(function () {
+  'use strict';
+
+  // Длительность анимации (ms) — синхронизируйте с CSS transition-duration
+  const TRANSITION_MS = 260;
+
+  const overlay = document.getElementById('mobileMenu');
+  const openBtn = document.getElementById('menuOpenBtn');
+  const closeBtn = document.getElementById('menuCloseBtn');
+
+  function isAvailable(el) { return !!(el && el instanceof Element); }
+
+  function openMenu() {
+    if (!isAvailable(overlay)) return;
+    overlay.classList.remove('is-closing');
+    overlay.classList.add('is-open');
+    overlay.setAttribute('aria-hidden', 'false');
+    if (isAvailable(openBtn)) openBtn.setAttribute('aria-expanded', 'true');
+
+    // блокируем скролл боди
+    document.body.classList.add('menu-open');
+
+    // сфокусируем первый фокусируемый элемент в drawer
+    requestAnimationFrame(() => {
+      const first = overlay.querySelector('.drawer a, .drawer button, .drawer [tabindex]:not([tabindex="-1"])');
+      if (first) first.focus();
+    });
+  }
+
+  function closeMenu() {
+    if (!isAvailable(overlay)) return;
+    overlay.classList.add('is-closing');
+    overlay.classList.remove('is-open');
+    overlay.setAttribute('aria-hidden', 'true');
+    if (isAvailable(openBtn)) openBtn.setAttribute('aria-expanded', 'false');
+
+    // ждем transitionend на overlay (opacity) или таймаут
+    let done = false;
+    function clean() {
+      if (done) return;
+      done = true;
+      overlay.classList.remove('is-closing');
+      document.body.classList.remove('menu-open');
+      // вернуть фокус на бургер
+      if (isAvailable(openBtn)) openBtn.focus();
+    }
+
+    function onTransitionEnd(e) {
+      if (e.target === overlay && e.propertyName === 'opacity') {
+        overlay.removeEventListener('transitionend', onTransitionEnd);
+        clean();
       }
+    }
+    overlay.addEventListener('transitionend', onTransitionEnd);
 
-      function closeMenu() {
-        if (!overlay) return;
-        overlay.classList.remove('is-open');
-        overlay.setAttribute('aria-hidden', 'true');
-        if (openBtn) openBtn.setAttribute('aria-expanded', 'false');
-        document.body.classList.remove('menu-open');
+    // fallback
+    setTimeout(() => {
+      if (!done) {
+        overlay.removeEventListener('transitionend', onTransitionEnd);
+        clean();
       }
+    }, TRANSITION_MS + 80);
+  }
 
-      openBtn && openBtn.addEventListener('click', openMenu);
-      closeBtn && closeBtn.addEventListener('click', closeMenu);
+  // toggle по бургеру: если меню открыто — закрываем, иначе открываем
+  if (isAvailable(openBtn)) {
+    openBtn.addEventListener('click', function (e) {
+      e.preventDefault();
+      if (!isAvailable(overlay)) return;
+      if (overlay.classList.contains('is-open')) closeMenu();
+      else openMenu();
+    });
+  }
 
-      overlay && overlay.addEventListener('click', function (e) {
-        if (e.target === overlay) closeMenu();
+  if (isAvailable(closeBtn)) {
+    closeBtn.addEventListener('click', function (e) {
+      e.preventDefault();
+      closeMenu();
+    });
+  }
+
+  if (isAvailable(overlay)) {
+    // клик по фону закрывает меню (если кликнули именно по overlay)
+    overlay.addEventListener('click', function (e) {
+      if (e.target === overlay || e.target.closest('[data-close]')) {
+        closeMenu();
+      }
+    });
+
+    // закрытие по ESC
+    document.addEventListener('keydown', function (e) {
+      if ((e.key === 'Escape' || e.key === 'Esc') && overlay.classList.contains('is-open')) {
+        closeMenu();
+      }
+    });
+
+    // закрытие при клике по ссылкам с data-close-menu
+    const links = overlay.querySelectorAll('[data-close-menu]');
+    links.forEach(function (a) {
+      a.addEventListener('click', function () {
+        closeMenu();
       });
+    });
 
-      document.addEventListener('keydown', function (e) {
-        if (e.key === 'Escape') closeMenu();
-      });
-
-      if (overlay) {
-        const links = overlay.querySelectorAll('[data-close-menu]');
-        links.forEach(function (a) {
-          a.addEventListener('click', function () {
-            closeMenu();
-          });
-        });
+    // блокируем скролл фоновой страницы при touchmove на overlay,
+    // но разрешаем скролл внутри .drawer
+    overlay.addEventListener('touchmove', function (e) {
+      // если таргет внутри drawer — позволяем прокрутку
+      if (e.target && e.target.closest && e.target.closest('.drawer')) {
+        // allow
+        return;
       }
-    })();
+      // иначе предотвращаем прокрутку фона
+      e.preventDefault();
+    }, { passive: false });
+  }
+
+  // для отладки / вызовов извне
+  window.openMobileMenu = openMenu;
+  window.closeMobileMenu = closeMenu;
+
+})();
   </script>
   <script src="{% static '/js/cookie-consent.js' %}"></script>
   <script src="{% static '/js/shop.js' %}"></script>

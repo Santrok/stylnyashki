@@ -247,28 +247,60 @@ img{ max-width:100%; display:block; }
 /* -------------------------
    Mobile menu overlay + drawer (partials/mobile_menu.html)
    ------------------------- */
-.overlay{
-  position:fixed;
-  inset:0;
+.overlay {
+  position: fixed;
+  inset: 0;
   background: rgba(0,0,0,0.35);
   z-index: 60;
-  display:none;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 260ms cubic-bezier(.2,.9,.2,1), visibility 0ms linear 260ms;
 }
-.overlay.is-open{ display:block; }
 
-.drawer{
-  position:absolute;
-  top:0; left:0;
-  height:100%;
-  width: min(86vw, 360px);
-  background:#fff;
-  box-shadow: 0 20px 40px rgba(0,0,0,0.2);
-  transform: translateX(-105%);
-  transition: transform 220ms ease;
-  display:flex;
-  flex-direction:column;
+.overlay.is-open {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transition: opacity 260ms cubic-bezier(.2,.9,.2,1), visibility 0ms linear 0ms;
 }
-.overlay.is-open .drawer{ transform: translateX(0); }
+
+.overlay.is-closing {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.drawer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;              /* ensure full height */
+  height: 100vh;          /* explicit full viewport height */
+  width: min(86vw, 360px);
+  background: #fff;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+  transform: translateX(-110%);
+  transition: transform 260ms cubic-bezier(.2,.9,.2,1);
+  display: flex;
+  flex-direction: column;
+  will-change: transform;
+  overflow-y: auto;                 /* enable vertical scrolling inside drawer */
+  -webkit-overflow-scrolling: touch; /* iOS momentum scrolling */
+}
+
+.overlay.is-open .drawer,
+.drawer.is-open {
+  transform: translateX(0);
+}
+
+.drawer.is-closing {
+  transform: translateX(-110%);
+}
+
+.drawer * { touch-action: manipulation; }
+
+.drawer :focus { outline-offset: 2px; }
 
 .drawer__header{
   height: 64px;
