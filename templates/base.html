@@ -103,138 +103,182 @@
 </div>
 
   <script>
-    Copilot said: Отлично — ниже готовые правки: обновлённый JS
-Отлично — ниже готовые правки: обновлённый JS (заменяет предыдущий mobile menu script) и небольшой CSS‑патч, который делает сам drawer скролящимся. Что добавлено:
-
-Повторный клик по бургеру теперь закрывает меню (toggle).
-При открытии меню блокируем скролл страницы (body.menu-open) и переводим фокус внутрь меню.
-При закрытии фокус возвращаем на бургер.
-Drawer теперь имеет внутренний вертикальный скрол с инерцией (-webkit-overflow-scrolling).
-При касании overlay (вне drawer) скролл страницы блокируется; внутри drawer скролл работает нормально.
-Закрытие по тапу на overlay, по Esc и по элементам с data-close/menu работает как раньше.
-JS — замените текущий mobile menu inline-скрипт на этот (лучше положить в static/js/mobile_menu.js и подключить с defer):
-JavaScript
-// static/js/mobile_menu.js
 (function () {
   'use strict';
 
-  // Длительность анимации (ms) — синхронизируйте с CSS transition-duration
   const TRANSITION_MS = 260;
 
   const overlay = document.getElementById('mobileMenu');
   const openBtn = document.getElementById('menuOpenBtn');
   const closeBtn = document.getElementById('menuCloseBtn');
+  const header = document.querySelector('.header');
+
+  // state lock to prevent concurrent open/close
+  let animating = false;
+  let isOpen = false;
 
   function isAvailable(el) { return !!(el && el instanceof Element); }
 
-  function openMenu() {
-    if (!isAvailable(overlay)) return;
+  function debug(...args) {
+    // console.log('mobileMenu:', ...args);
+  }
+
+  function applyOpenState() {
     overlay.classList.remove('is-closing');
     overlay.classList.add('is-open');
     overlay.setAttribute('aria-hidden', 'false');
     if (isAvailable(openBtn)) openBtn.setAttribute('aria-expanded', 'true');
-
-    // блокируем скролл боди
     document.body.classList.add('menu-open');
-
-    // сфокусируем первый фокусируемый элемент в drawer
-    requestAnimationFrame(() => {
-      const first = overlay.querySelector('.drawer a, .drawer button, .drawer [tabindex]:not([tabindex="-1"])');
-      if (first) first.focus();
-    });
+    isOpen = true;
   }
 
-  function closeMenu() {
-    if (!isAvailable(overlay)) return;
+  function applyCloseState() {
     overlay.classList.add('is-closing');
     overlay.classList.remove('is-open');
     overlay.setAttribute('aria-hidden', 'true');
     if (isAvailable(openBtn)) openBtn.setAttribute('aria-expanded', 'false');
+    isOpen = false;
+  }
 
-    // ждем transitionend на overlay (opacity) или таймаут
+  function openMenu() {
+    if (!isAvailable(overlay) || animating || isOpen) return;
+    animating = true;
+    debug('openMenu start');
+    applyOpenState();
+
+    // focus first focusable
+    requestAnimationFrame(() => {
+      const first = overlay.querySelector('.drawer a, .drawer button, .drawer [tabindex]:not([tabindex="-1"])');
+      if (first) first.focus();
+    });
+
+    // end animation after TRANSITION_MS
+    setTimeout(() => {
+      animating = false;
+      debug('openMenu end');
+    }, TRANSITION_MS + 40);
+  }
+
+  function closeMenu() {
+    if (!isAvailable(overlay) || animating || !isOpen) return;
+    animating = true;
+    debug('closeMenu start');
+    applyCloseState();
+
+    // wait for transitionend (opacity) or fallback
     let done = false;
-    function clean() {
+    function doneCleanup() {
       if (done) return;
       done = true;
       overlay.classList.remove('is-closing');
       document.body.classList.remove('menu-open');
-      // вернуть фокус на бургер
+      // return focus to burger
       if (isAvailable(openBtn)) openBtn.focus();
+      animating = false;
+      debug('closeMenu done');
     }
 
     function onTransitionEnd(e) {
       if (e.target === overlay && e.propertyName === 'opacity') {
         overlay.removeEventListener('transitionend', onTransitionEnd);
-        clean();
+        doneCleanup();
       }
     }
     overlay.addEventListener('transitionend', onTransitionEnd);
 
-    // fallback
     setTimeout(() => {
-      if (!done) {
-        overlay.removeEventListener('transitionend', onTransitionEnd);
-        clean();
-      }
+      if (!done) doneCleanup();
     }, TRANSITION_MS + 80);
   }
 
-  // toggle по бургеру: если меню открыто — закрываем, иначе открываем
-  if (isAvailable(openBtn)) {
-    openBtn.addEventListener('click', function (e) {
-      e.preventDefault();
-      if (!isAvailable(overlay)) return;
-      if (overlay.classList.contains('is-open')) closeMenu();
-      else openMenu();
-    });
+  function toggleMenu() {
+    if (isOpen) closeMenu();
+    else openMenu();
   }
 
-  if (isAvailable(closeBtn)) {
-    closeBtn.addEventListener('click', function (e) {
+  // Attach robust listeners to burger: click + touchend + pointerup
+  function attachToggleListeners(btn) {
+    if (!isAvailable(btn)) return;
+    // click (desktop & mobile after tap)
+    btn.addEventListener('click', function (e) {
       e.preventDefault();
-      closeMenu();
+      e.stopPropagation();
+      toggleMenu();
     });
+
+    // touchend to make toggle more responsive on some mobile browsers
+    btn.addEventListener('touchend', function (e) {
+      // prevent double firing with click on some devices
+      e.preventDefault();
+      e.stopPropagation();
+      toggleMenu();
+    }, { passive: false });
+
+    // pointerup as extra fallback
+    btn.addEventListener('pointerup', function (e) {
+      // allow pointer events to bubble normally, but ensure toggle if not animating
+      if (e.pointerType === 'touch') {
+        e.preventDefault();
+        e.stopPropagation();
+        toggleMenu();
+      }
+    }, { passive: false });
   }
 
-  if (isAvailable(overlay)) {
-    // клик по фону закрывает меню (если кликнули именно по overlay)
-    overlay.addEventListener('click', function (e) {
-      if (e.target === overlay || e.target.closest('[data-close]')) {
-        closeMenu();
+  // overlay/backdrop interactions
+  function setupOverlay(ov) {
+    if (!isAvailable(ov)) return;
+
+    // click on backdrop closes if clicked outside drawer
+    ov.addEventListener('click', function (e) {
+      if (e.target === ov || e.target.closest('[data-close]')) {
+        // if animating — ignore
+        if (!animating) closeMenu();
       }
     });
 
-    // закрытие по ESC
+    // ESC to close
     document.addEventListener('keydown', function (e) {
-      if ((e.key === 'Escape' || e.key === 'Esc') && overlay.classList.contains('is-open')) {
+      if ((e.key === 'Escape' || e.key === 'Esc') && isOpen && !animating) {
         closeMenu();
       }
     });
 
-    // закрытие при клике по ссылкам с data-close-menu
-    const links = overlay.querySelectorAll('[data-close-menu]');
-    links.forEach(function (a) {
-      a.addEventListener('click', function () {
-        closeMenu();
-      });
-    });
+    // links with data-close-menu close
+    const links = ov.querySelectorAll('[data-close-menu]');
+    links.forEach(a => a.addEventListener('click', function () {
+      if (!animating) closeMenu();
+    }));
 
-    // блокируем скролл фоновой страницы при touchmove на overlay,
-    // но разрешаем скролл внутри .drawer
-    overlay.addEventListener('touchmove', function (e) {
-      // если таргет внутри drawer — позволяем прокрутку
+    // touchmove: prevent background scroll, but only when not touching inside drawer
+    ov.addEventListener('touchmove', function (e) {
+      // if target is inside drawer, allow scrolling
       if (e.target && e.target.closest && e.target.closest('.drawer')) {
-        // allow
         return;
       }
-      // иначе предотвращаем прокрутку фона
+      // otherwise prevent background scroll
       e.preventDefault();
     }, { passive: false });
   }
 
-  // для отладки / вызовов извне
+  // initialize
+  if (isAvailable(openBtn)) attachToggleListeners(openBtn);
+  if (isAvailable(closeBtn)) {
+    closeBtn.addEventListener('click', function (e) {
+      e.preventDefault();
+      if (!animating) closeMenu();
+    });
+  }
+
+  if (isAvailable(overlay)) setupOverlay(overlay);
+
+  // expose for debugging if needed
   window.openMobileMenu = openMenu;
   window.closeMobileMenu = closeMenu;
+  window.toggleMobileMenu = toggleMenu;
+
+  // set initial vars from DOM state
+  isOpen = overlay && overlay.classList.contains('is-open');
 
 })();
   </script>
