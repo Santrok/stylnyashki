@@ -932,3 +932,56 @@ body.menu-open{ overflow:hidden; }
   .cc-banner__inner { flex-direction:column; align-items:flex-start; gap:8px; padding:12px; }
   .cc-banner__actions { margin-left:0; width:100%; justify-content:flex-start; }
 }
+
+/* ------------------------
+   Cart visual states (cards / mobile rows / modal)
+   ------------------------ */
+
+/* плавные переходы для карточек / строк / модалки */
+.p-card, .cart-item, [data-cart-item], .p-modal__panel {
+  transition: background-color .25s ease, color .25s ease, opacity .25s ease, transform .25s ease;
+}
+
+/* состояние: товар в корзине — лёгкая подсветка карточки/строки */
+.p-card.is-in-cart,
+.cart-item.is-in-cart,
+[data-cart-item].is-in-cart,
+.p-modal__panel.is-in-cart {
+  background-color: #FFF6FB; /* можно скорректировать под брендинг */
+  border-left: 4px solid rgba(201,66,132,0.14);
+}
+
+/* мягкая подсветка для модалки */
+.p-modal__panel.is-in-cart {
+  background-color: #fffafc;
+  box-shadow: 0 30px 80px rgba(201,66,132,0.04);
+}
+
+/* эффект удаления: приглушение + небольшое смещение */
+.p-card.is-removed,
+.cart-item.is-removed,
+[data-cart-item].is-removed,
+.p-modal__panel.is-removed {
+  background-color: rgba(17,24,39,0.03);
+  opacity: 0.66;
+  transform: translateX(6px);
+}
+
+/* мобильные уточнения */
+@media (max-width: 768px) {
+  .cart-item.is-in-cart,
+  [data-cart-item].is-in-cart {
+    background-color: rgba(201,66,132,0.06);
+  }
+  .cart-item.is-removed,
+  [data-cart-item].is-removed {
+    background-color: rgba(0,0,0,0.03);
+    opacity: 0.7;
+  }
+}
+
+/* (опционально) если нужно, подчеркнуть текст цены при in-cart */
+.p-card.is-in-cart .price-new,
+.cart-item.is-in-cart .price-new {
+  color: var(--purple);
+}
