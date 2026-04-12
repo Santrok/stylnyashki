@@ -1,4 +1,3 @@
-// static/js/checkout.js
 (function () {
   function getCheckedValue() {
     const checked = document.querySelector('[data-delivery-radio]:checked');
@@ -22,5 +21,62 @@
 
   document.addEventListener('DOMContentLoaded', function () {
     syncPanels();
+  });
+})();
+
+// Payment method chooser logic
+(function () {
+  // ensure DOM ready
+  document.addEventListener('DOMContentLoaded', function () {
+    const paymentRadios = document.querySelectorAll('[data-payment-radio]');
+    const paymentPanels = document.querySelectorAll('[data-payment-panel]');
+
+    function setActivePayment(method) {
+      // set label active classes
+      document.querySelectorAll('.co-payment-btn').forEach(lbl => lbl.classList.remove('is-active'));
+      const input = document.querySelector(`[data-payment-radio][value="${method}"]`);
+      if (input) {
+        const label = input.closest('.co-payment-btn');
+        if (label) label.classList.add('is-active');
+      }
+
+      // show/hide panels
+      paymentPanels.forEach(p => {
+        if (p.getAttribute('data-payment-panel') === method) {
+          p.style.display = '';
+          p.setAttribute('data-visible', '1');
+        } else {
+          p.style.display = 'none';
+          p.removeAttribute('data-visible');
+        }
+      });
+    }
+
+    // initialize: find checked or default to cod
+    const initial = document.querySelector('[data-payment-radio]:checked');
+    if (initial) {
+      setActivePayment(initial.value);
+    } else if (paymentRadios.length) {
+      paymentRadios[0].checked = true;
+      setActivePayment(paymentRadios[0].value);
+    }
+
+    // click/change handler
+    document.addEventListener('change', function (e) {
+      if (e.target && e.target.matches('[data-payment-radio]')) {
+        setActivePayment(e.target.value);
+      }
+    });
+
+    // also allow clicking on label (just add .is-active visually)
+    document.querySelectorAll('.co-payment-btn').forEach(lbl => {
+      lbl.addEventListener('click', function (ev) {
+        const input = this.querySelector('[data-payment-radio]');
+        if (input) {
+          input.checked = true;
+          input.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+      });
+    });
   });
 })();

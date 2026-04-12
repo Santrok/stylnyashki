@@ -154,10 +154,14 @@
             <input class="check__input" type="checkbox" required>
             <span class="check__box" aria-hidden="true"></span>
             <span class="check__text check__text--small">
-              Я согласен с <a class="auth-link auth-link--underline" href="#">политикой конфиденциальности</a> и правилами сайта
+              Я согласен с <a class="auth-link auth-link--underline" href="{% url 'privacy' %}">политикой конфиденциальности</a> и правилами сайта
             </span>
           </label>
-
+            {% if form.check__input.errors %}
+              <p class="field__error" data-field-error>
+                {% for err in form.check__input.errors %}{{ err }}{% endfor %}
+              </p>
+            {% endif %}
         </div>
 
         <button class="auth-btn auth-btn--yellow" type="submit">Зарегистрироваться</button>

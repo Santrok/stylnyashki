@@ -606,3 +606,49 @@
   filter: brightness(0.98);
   transform: scale(1.01);
 }
+
+/* Payment method chooser */
+.co-payment-choices {
+  display:flex;
+  gap:12px;
+  flex-wrap:wrap;
+  margin: 12px 0;
+}
+
+.co-payment-btn {
+  display:inline-flex;
+  align-items:center;
+  gap:10px;
+  padding:10px 12px;
+  border-radius:10px;
+  background:#fff;
+  border:1px solid var(--border);
+  cursor:pointer;
+  transition: box-shadow .12s ease, transform .08s ease, border-color .12s ease;
+  user-select:none;
+  min-width:180px;
+}
+.co-payment-btn input { display:none; }
+.co-payment-btn__content { display:flex; align-items:center; gap:10px; font-weight:800; color:var(--text); }
+.co-payment-btn i { font-size:18px; color:var(--muted); width:22px; text-align:center; }
+
+/* active state */
+.co-payment-btn.is-active {
+  border-color: var(--purple);
+  box-shadow: 0 8px 24px rgba(201,66,132,0.08);
+  transform: translateY(-2px);
+  background: linear-gradient(180deg, #fff, #fffafc);
+}
+.co-payment-btn.is-active i { color: var(--purple); }
+.co-payment-btn.is-active .co-payment-btn__content { color:#111827; }
+
+/* panels */
+.co-payment-panels { margin-top:12px; }
+.co-payment-panel { display:none; padding:12px; border-radius:8px; background:#fafafa; border:1px dashed #eee; color:var(--text); }
+.co-payment-panel[data-visible="1"] { display:block; }
+
+/* responsive smaller cards */
+@media (max-width:640px) {
+  .co-payment-choices { gap:8px; }
+  .co-payment-btn { min-width: calc(50% - 8px); padding:10px; }
+}

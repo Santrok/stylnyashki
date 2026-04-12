@@ -1,0 +1,198 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Как заказать — Стильняшки{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'css/how_to_order.css' %}"/>
+{% endblock %}
+
+{% block content %}
+<section class="section howto">
+    <div class="container">
+        <header class="howto-header">
+            <div class="howto-header-left">
+                <h1 class="howto-title">Как заказать</h1>
+                <p class="howto-subtitle">Как заказать в нашем интернет‑магазине? — Очень просто!</p>
+                <p class="muted small">Онлайн‑заказы принимаем круглосуточно.</p>
+            </div>
+
+        </header>
+
+        <div class="howto-layout">
+            <nav class="howto-toc" aria-label="Оглавление">
+                <strong class="toc-title">Оглавление</strong>
+                <ul>
+                    <li><a href="#overview">Общее</a></li>
+                    <li><a href="#step-1">1. Выбор товара</a></li>
+                    <li><a href="#step-2">2. Корзина</a></li>
+                    <li><a href="#step-3">3. Оформление заказа</a></li>
+                    <li><a href="#step-4">4. Оплата и доставка</a></li>
+                    <li><a href="#step-5">5. Контактные данные</a></li>
+                    <li><a href="#step-6">6. Комментарий</a></li>
+                    <li><a href="#step-7">7. Подтверждение и оплата</a></li>
+                    <li><a href="#tips">Полезные советы</a></li>
+                </ul>
+            </nav>
+
+            <main class="howto-body" id="howtoContent">
+                <article id="overview" class="howto-section">
+                    <h2>Коротко</h2>
+                    <p>Процесс заказа в нашем интернет‑магазине прост и интуитивен: вы выбираете товар, добавляете в
+                        корзину, оформляете заказ — указываете адрес и способ доставки/оплаты — подтверждаете. Ниже
+                        пошагово описано, что и где делать.</p>
+                </article>
+
+                <article id="step-1" class="howto-section">
+                    <h2>1. Выбор товара</h2>
+                    <p>Перейдите в <a href="{% url 'catalog' %}" style="color: var(--purple)">каталог</a> и выберите интересующий товар. В окне карточки товара нажмите кнопку <strong>«В корзину»</strong> или нажмите иконку <strong>«Корзина»</strong>. Это поместит товар в вашу
+                        Корзину.</p>
+                    <div class="instruction_image_wrapper">
+                        <div class="instruction_image_list" >
+                            <div class="instruction_image">
+                                <img src="{% static 'img/order_steps/step_1.avif' %}" alt="">
+                            </div>
+                            <div class="instruction_image">
+                                <img src="{% static 'img/order_steps/step_3.avif' %}" alt="">
+                            </div>
+                        </div>
+                        <p>При этом цвет карточки товара и цвет кнопки добавления в корзину изменятся.</p>
+                        <div class="instruction_image_list">
+                            <div class="instruction_image">
+                                <img src="{% static 'img/order_steps/step_2.avif' %}" alt="">
+                            </div>
+                            <div class="instruction_image">
+                                <img src="{% static 'img/order_steps/step_4.avif' %}" alt="">
+                            </div>
+                        </div>
+                    </div>
+                </article>
+
+                <article id="step-2" class="howto-section">
+                    <h2>2. Корзина</h2>
+                    <p>Для того что бы перейти в корзину нажмите на значок корзины в верхней части экрана</p>
+                    <div class="instruction_image_wrapper">
+                        <div class="instruction_image">
+                        <img src="{% static 'img/order_steps/step_5.avif' %}" alt="">
+                    </div>
+                    <p>Либо на кнопку <strong>«Корзина»</strong> в мобильном меню</p>
+                    <div class="instruction_image mobile-menu">
+                        <img src="{% static 'img/order_steps/step_6.avif' %}" alt="">
+                    </div>
+                    </div>
+                    <p>На странице корзины вы увидите все добавленные товары. Здесь можно:</p>
+                    <ul>
+                        <li>Выбрать товар для заказа;</li>
+                        <li>Удалить товар;</li>
+                        <li>Посмотреть предварительную стоимость заказа.</li>
+                    </ul>
+                    <div class="instruction_image single">
+                        <img src="{% static 'img/order_steps/step_7.avif' %}" alt="">
+                    </div>
+                    <p>Когда всё проверено — нажмите <strong>«Перейти к оформлению»</strong>, чтобы перейти к странице
+                        оформления.</p>
+                </article>
+
+                <article id="step-3" class="howto-section">
+                    <h2>3. Страница оформления заказа</h2>
+                    <p>Вверху страницы показана мини‑Корзина с товарами, их количеством, ценой и итоговой суммой.</p>
+                    <p>Ниже находятся блоки, которые нужно заполнить для завершения заказа:</p>
+                    <ul>
+                        <li><strong>Блок «Контактные данные»</strong> — Ф.И.О., телефон, e‑mail, ник Instagram;</li>
+                        <li><strong>Выбор способа доставки</strong> — выберите подходящий способ из доступных;</li>
+                        <li><strong>Адрес доставки</strong> — индекс, город, улица, дом, корпус, квартира/офис и т.д.;</li>
+                        <li><strong>Выбор способа оплаты</strong> — наложенный платеж, оплата картой и т.д.;
+                        </li>
+                        <li>Поля со звездочкой (*) — обязательные для заполнения.</li>
+                    </ul>
+                    <div class="instruction_image single">
+                        <img src="{% static 'img/order_steps/step_8.avif' %}" alt="">
+                    </div>
+                </article>
+
+                <article id="step-4" class="howto-section">
+                    <h2>4. Контактные данные</h2>
+                    <p>В блоке «Контактные данные» укажите:</p>
+                    <ul>
+                        <li>Ф.И.О.;</li>
+                        <li>Контактный телефон — на него мы можем позвонить для уточнения заказа;</li>
+                        <li>Ник Instagram — на него мы можем написать для уточнения заказа;</li>
+                        <li>Email — мы отправим подтверждение о заказе;</li>
+                        <li>Адрес доставки — указывайте подробно (улица, дом, корпус, кв./офис).
+                        </li>
+                    </ul>
+                    <div class="instruction_image single">
+                        <img src="{% static 'img/order_steps/step_9.avif' %}" alt="">
+                    </div>
+                    <p>Проверяйте данные внимательно — от корректности зависит успешная доставка.</p>
+                </article>
+
+                <article id="step-5" class="howto-section">
+                    <h2>5. Оплата и доставка</h2>
+                    <p>Выберите удобную комбинацию «Оплата + Доставка». Обратите внимание:</p>
+                    <ul>
+                        <li>Оплата услуг почтового оператора производится при получении заказа, независимо от способа оплаты;
+                        </li>
+                        <li>При онлайн‑оплате вы будете перенаправлены на защищённый шлюз (Webpay или другой провайдер)
+                            для ввода данных карты;
+                        </li>
+                        <li>Стоимость и сроки доставки зависят от способа и адреса.
+                        </li>
+                    </ul>
+                    <div class="instruction_image_wrapper single">
+                        <div class="instruction_image">
+                        <img src="{% static 'img/order_steps/step_10.avif' %}" alt="">
+                    </div>
+                    <div class="instruction_image">
+                        <img src="{% static 'img/order_steps/step_14.avif' %}" alt="">
+                    </div>
+                    </div>
+                </article>
+
+                <article id="step-6" class="howto-section">
+                    <h2>6. Блок «Комментарий»</h2>
+                    <p>Внизу формы есть блок «Комментарий» — необязательное поле, где вы можете оставить инструкции для
+                        курьера (подъезд, этаж, код домофона), пожелания по упаковке и др.</p>
+                    <div class="instruction_image">
+                        <img src="{% static 'img/order_steps/step_15.avif' %}" alt="">
+                    </div>
+                </article>
+
+                <article id="step-7" class="howto-section">
+                    <h2>7. Подтверждение заказа и оплата</h2>
+                    <ol>
+                        <li>После заполнения всех полей внимательно проверьте введённую информацию.</li>
+                        <li>Ознакомьтесь с <a href="{% url 'public_offer' %}" style="color: var(--purple)">Договором публичной оферты</a> и <a
+                                href="{% url 'privacy' %}" style="color: var(--purple)">Политикой конфиденциальности</a>. Оформляя заказ, вы
+                            соглашаетесь с ними.
+                        </li>
+                        <li>Нажмите <strong>«Оформить заказ»</strong>. При наложенном платеже заказ считается
+                            оформленным — ожидайте доставку. При онлайн‑оплате вы попадёте на платёжный шлюз для
+                            завершения оплаты.
+                        </li>
+                        <li>После успешного оформления вас перенаправит на страницу с информацией об успешном оформлении заказа и вы получите письмо‑подтверждение на e‑mail.</li>
+                    </ol>
+                    <div class="instruction_image single">
+                        <img src="{% static 'img/order_steps/step_12.avif' %}" alt="">
+                    </div>
+                </article>
+
+                <article id="tips" class="howto-section">
+                    <h2>Полезные советы</h2>
+                    <ul>
+                        <li>Если товар закончился, мы свяжемся с вами для согласования альтернативы или возврата
+                            средств.
+                        </li>
+                        <li>Сохраняйте чек и сообщение подтверждения — они пригодятся при возврате/обмене.</li>
+                        <li>Если нужна срочная доставка — укажите это в комментарии и свяжитесь с нами по телефону.</li>
+                    </ul>
+                </article>
+
+            </main>
+        </div>
+    </div>
+</section>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.9.3/html2pdf.bundle.min.js"></script>
+<script src="{% static 'js/how_to_order.js' %}" defer></script>
+{% endblock %}

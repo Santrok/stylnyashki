@@ -1,0 +1,93 @@
+/* how_to_order.css */
+
+.howto-header {
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:20px;
+  margin-bottom:18px;
+  margin-top:18px;
+}
+.howto-header-left { flex:1 1 auto; }
+.howto-actions { flex:0 0 auto; display:flex; gap:8px; align-items:center; }
+
+.howto-title { margin:0 0 6px 0; font-size:26px; font-weight:900; color:var(--text); }
+.howto-subtitle { margin:0; color:var(--muted); font-weight:700; }
+.muted { color:var(--muted); }
+
+.howto-layout { display:flex; gap:24px; align-items:flex-start; }
+
+/* TOC */
+.howto-toc {
+  width:220px;
+  background:#fff;
+  border-radius:12px;
+  padding:12px;
+  box-shadow:0 6px 18px rgba(10,10,10,0.04);
+  flex:0 0 220px;
+  position:sticky;
+  top: calc(var(--header-height,64px) + 18px);
+  height: calc(100vh - (var(--header-height,64px) + 36px));
+  overflow:auto;
+  -webkit-overflow-scrolling: touch;
+}
+.howto-toc .toc-title { display:block; margin-bottom:8px; font-weight:900; color:var(--muted); }
+.howto-toc ul { list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:6px; }
+.howto-toc a { display:block; padding:8px 10px; border-radius:8px; color:var(--text); font-weight:800; text-decoration:none; }
+.howto-toc a:hover { background:#f8f8fb; color:var(--purple); }
+.howto-toc a.active { background:var(--purple); color:#fff; }
+
+/* content */
+.howto-body {
+  flex:1 1 auto;
+  min-width:0;
+  background:#fff;
+  border-radius:12px;
+  padding:20px;
+  box-shadow:0 6px 18px rgba(10,10,10,0.03);
+  max-width:900px;
+}
+
+.instruction_image_wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.instruction_image_list {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+}
+
+.mobile-menu {
+    max-width: 300px;
+    max-height: 600px;
+    align-self: center;
+    & img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+}
+
+.single {
+    margin-top: 15px;
+}
+
+.howto-section { margin-bottom:22px; }
+.howto-section h2 { margin-top:0; margin-bottom:10px; font-size:18px; color:var(--text); }
+.howto-section ul, .howto-section ol { margin:0 0 0 18px; color:var(--text); line-height:1.6; }
+.howto-footer { margin-top:18px; border-top:1px solid var(--border); padding-top:12px; }
+
+/* responsive */
+@media (max-width:980px) {
+  .howto-layout { flex-direction:column-reverse; }
+  .howto-toc { position:relative; width:100%; height:auto; top:0; order:2; flex:0 0; }
+  .howto-body { order:1; }
+  .howto-header { flex-direction:column; align-items:flex-start; gap:12px; }
+  .instruction_image_list { flex-direction: column;}
+}
+
+/* smooth scroll */
+html { scroll-behavior: smooth; }

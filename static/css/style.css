@@ -430,7 +430,7 @@ body.menu-open{ overflow:hidden; }
   position: relative;
   width: min(92vw, 980px);
   max-height: min(86vh, 720px);
-  margin: 7vh auto 0;
+  margin: 15vh auto 0;
   background:#fff;
   border-radius: 18px;
   overflow: hidden;

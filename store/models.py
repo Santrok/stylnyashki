@@ -303,6 +303,11 @@ class Order(models.Model):
         POST = "post", "Почта"
         EUROPOST = "europost", "Европочта"
 
+    class PaymentMethod(models.TextChoices):
+        COD = "cod", "При получении (наложенный платеж)"
+        ERIP = "erip", "АИС \"Расчёт\" (ЕРИП)"
+        CARD = "card", "Онлайн картой"
+
     order_number = models.CharField(
         "Номер заказа",
         max_length=32,
@@ -336,7 +341,13 @@ class Order(models.Model):
         choices=DeliveryType.choices,
     )
 
-    # --- Получатель (snapshot на момент заказа) ---
+    payment_method = models.CharField(
+        "Способ оплаты",
+        max_length=16,
+        choices=PaymentMethod.choices,
+        default=PaymentMethod.COD,
+    )
+
     last_name = models.CharField("Фамилия", max_length=150)
     first_name = models.CharField("Имя", max_length=150)
     middle_name = models.CharField("Отчество", max_length=150)
@@ -348,6 +359,7 @@ class Order(models.Model):
         default="",
         help_text="Ник в Instagram для связи (например: username или @username).",
     )
+    email = models.EmailField("Email")
 
     # --- Доставка: Почта ---
     postal_index = models.CharField("Почтовый индекс", max_length=16, blank=True, default="")

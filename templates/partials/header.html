@@ -14,9 +14,10 @@
     </a>
 
     <nav class="nav" aria-label="Категории">
-        {% for category in categories %}
-      <a href="{% url 'catalog' %}?category={{category.slug}}" class="nav__{{ category.icon_background_class|cut:'cat-card--' }}">{{ category.title }}</a>
-        {% endfor %}
+        <a href="{% url 'catalog' %}">Каталог</a>
+        <a href="{% url 'how_to_order' %}">Заказ</a>
+        <a href="{% url 'catalog' %}">Оплата</a>
+        <a href="{% url 'catalog' %}">Доставка</a>
     </nav>
 
     <div class="actions">

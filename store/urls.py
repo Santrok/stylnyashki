@@ -48,9 +48,10 @@ urlpatterns = [
     path('cart/add/<int:product_id>/', cart_add, name='cart_add'),
     path('cart/remove/<int:item_id>/', cart_remove, name='cart_remove'),
 
-    path('cookie-settings/', TemplateView.as_view(template_name='store/cookie_settings.html'), name='cookie_settings'),
-    path('privacy/', TemplateView.as_view(template_name='store/cookie_settings.html'), name='privacy'),
+    path('cookie-settings/', TemplateView.as_view(template_name='cookie_settings.html'), name='cookie_settings'),
+    path('privacy/', TemplateView.as_view(template_name='privacy_policy.html'), name='privacy'),
     path('public_offer/', TemplateView.as_view(template_name='public_offer.html'), name='public_offer'),
+    path('how_to_order/', TemplateView.as_view(template_name='how_to_order.html'), name='how_to_order'),
 
     # API
     # path('api/', include(router.urls)),

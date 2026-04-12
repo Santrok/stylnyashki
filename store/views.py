@@ -187,7 +187,6 @@ def cart_page(request):
 def checkout_view(request):
     cart = get_or_create_cart(request)
 
-    # Все позиции корзины (используется для валидаций / fallback)
     all_cart_items_qs = cart.items.select_related("product", "size").all()
 
     # Количество недоступных позиций в корзине (для показа подсказки)
@@ -204,7 +203,6 @@ def checkout_view(request):
     #     selected_ids = request.GET.getlist("selected_items")
     selected_ids = request.GET.getlist("selected_items")
 
-    # Нормализуем selected_ids -> ints (безопасно)
     try:
         selected_ids = [int(x) for x in selected_ids if x is not None and str(x).strip() != ""]
     except ValueError:
@@ -262,6 +260,8 @@ def checkout_view(request):
                 initial["first_name"] = user.first_name
             if user.last_name:
                 initial["last_name"] = user.last_name
+            if user.email:
+                initial["email"] = user.email
 
         if profile and getattr(profile, "phone", ""):
             initial["phone"] = profile.phone
@@ -279,6 +279,8 @@ def checkout_view(request):
 
         # default delivery type: если есть только европочта — выбираем её
         initial["delivery_type"] = Order.DeliveryType.EUROPOST if (ep_addr and not post_addr) else Order.DeliveryType.POST
+
+        initial["payment_method"] = Order.PaymentMethod.COD
 
         if post_addr:
             initial.update({
@@ -345,12 +347,14 @@ def checkout_view(request):
                     user=user if user else None,
                     status=Order.Status.NEW,
                     delivery_type=cd["delivery_type"],
+                    payment_method=cd.get("payment_method", Order.PaymentMethod.COD),
 
                     first_name=cd["first_name"],
                     last_name=cd["last_name"],
                     middle_name=cd.get("middle_name", ""),
                     phone=cd["phone"],
                     instagram=cd.get("instagram", ""),
+                    email=cd.get("email", ""),
 
                     postal_index=cd.get("postal_index", "") if cd["delivery_type"] == Order.DeliveryType.POST else "",
                     city=cd.get("city", "") if cd["delivery_type"] == Order.DeliveryType.POST else "",

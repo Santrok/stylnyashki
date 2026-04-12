@@ -46,6 +46,7 @@ class RegisterForm(forms.Form):
     email = forms.EmailField(label='E-mail', required=False)
     password1 = forms.CharField(label='Пароль', widget=forms.PasswordInput)
     password2 = forms.CharField(label='Повторите пароль', widget=forms.PasswordInput)
+    check__input = forms.BooleanField(required=True)
 
     def clean_username(self):
         username = (self.cleaned_data.get('username') or '').strip()
@@ -278,12 +279,19 @@ class CheckoutForm(forms.Form):
         label="Тип доставки",
     )
 
+    payment_method = forms.ChoiceField(
+        choices=Order.PaymentMethod.choices,
+        required=True,
+        label="Способ оплаты",
+    )
+
     # contacts
     first_name = forms.CharField(max_length=150, required=True, label="Имя")
     last_name = forms.CharField(max_length=150, required=True, label="Фамилия")
     middle_name = forms.CharField(max_length=150, required=True, label="Отчество")
     phone = forms.CharField(max_length=32, required=True, label="Телефон")
     instagram = forms.CharField(max_length=64, required=True, label="Instagram")
+    email = forms.EmailField(required=True, label="Email")
 
     # post
     postal_index = forms.CharField(max_length=16, required=False, label="Почтовый индекс")
@@ -327,7 +335,12 @@ class CheckoutForm(forms.Form):
             if not (cleaned.get("europost_branch_number") or "").strip():
                 self.add_error("europost_branch_number", "Обязательное поле.")
         else:
-            raise ValidationError("Выберите способ доставки.")
+            self.add_error("delivery_type", "Выберите способ доставки.")
+
+        pm = cleaned.get("payment_method")
+        pm_choices = {c[0] for c in Order.PaymentMethod.choices}
+        if not pm or pm not in pm_choices:
+            self.add_error("payment_method", "Выберите способ оплаты.")
 
         return cleaned
 

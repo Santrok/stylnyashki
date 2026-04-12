@@ -129,6 +129,19 @@
   {% if form.instagram.errors %}
     <p class="co-f__error">{% for err in form.instagram.errors %}{{ err }}{% endfor %}</p>
   {% endif %}
+
+</div>
+                            <div class="co-f">
+  <p class="co-f__label">Email *</p>
+  <input class="co-input form-input"
+         type="text"
+         name="{{ form.email.html_name }}"
+         value="{{ form.email.value|default_if_none:'' }}"
+         placeholder="my_email@yandex.ru"
+         {% if form.email.errors %}data-has-error="1"{% endif %}>
+  {% if form.email.errors %}
+    <p class="co-f__error">{% for err in form.email.errors %}{{ err }}{% endfor %}</p>
+  {% endif %}
 </div>
                         </div>
                     </div>
@@ -267,12 +280,82 @@
                         </div>
                     </div>
 
+                    <!-- 4) Способ оплаты -->
+                    <div class="co-card">
+                        <div class="co-card__head">
+                            <div class="co-bubble co-bubble--blue">4</div>
+                            <h2 class="co-card__title brand-font">Способ оплаты</h2>
+                        </div>
+
+                        <div class="co-payment-choices">
+                            <label class="co-payment-btn">
+                                <input type="radio"
+                                       data-payment-radio
+                                       name="{% if form.payment_method %}{{ form.payment_method.html_name }}{% else %}payment_method{% endif %}"
+                                       value="cod"
+                                       {% if form.payment_method.value == "cod" or not form.payment_method.value %}checked{% endif %}>
+                                <span class="co-payment-btn__content">
+        <i class="fas fa-money-bill-wave" aria-hidden="true"></i>
+        <span>При получении (наложенный платеж)</span>
+      </span>
+                            </label>
+
+                            <label class="co-payment-btn">
+                                <input type="radio"
+                                       data-payment-radio
+                                       name="{% if form.payment_method %}{{ form.payment_method.html_name }}{% else %}payment_method{% endif %}"
+                                       value="erip"
+                                       {% if form.payment_method.value == "erip" %}checked{% endif %}>
+                                <span class="co-payment-btn__content">
+        <i class="fas fa-receipt" aria-hidden="true"></i>
+        <span>АИС "Расчет" (ЕРИП)</span>
+      </span>
+                            </label>
+
+                            <label class="co-payment-btn">
+                                <input type="radio"
+                                       data-payment-radio
+                                       name="{% if form.payment_method %}{{ form.payment_method.html_name }}{% else %}payment_method{% endif %}"
+                                       value="card"
+                                       {% if form.payment_method.value == "card" %}checked{% endif %}>
+                                <span class="co-payment-btn__content">
+        <i class="fas fa-credit-card" aria-hidden="true"></i>
+        <span>Онлайн картой</span>
+      </span>
+                            </label>
+                        </div>
+
+                        <div class="co-payment-panels">
+                            <div class="co-payment-panel" data-payment-panel="cod">
+                                <p><strong>При получении (наложенный платеж)</strong> — оплата производится при
+                                    получении заказа в почтовом отделении. Обратите внимание: при
+                                    наложенном платеже возможна комиссия почтового оператора.</p>
+                            </div>
+
+                            <div class="co-payment-panel" data-payment-panel="erip" style="display:none;">
+                                <p><strong>АИС "Расчет" (ЕРИП)</strong> — выбрав данный способ, вы получите реквизиты
+                                    (номер для оплаты в ЕРИП). Оплатите через интернет‑банкинг или терминал, затем
+                                    отправьте подтверждение оплаты, если это требуется.</p>
+                            </div>
+
+                            <div class="co-payment-panel" data-payment-panel="card" style="display:none;">
+                                <p><strong>Оплата онлайн картой</strong> — после оформления вы будете перенаправлены на
+                                    защищённый платёжный шлюз для ввода реквизитов карты. Платёж производится через
+                                    защищённое соединение.</p>
+                            </div>
+                        </div>
+
+                        {% if form.payment_method.errors %}
+                        <p class="co-f__error">{% for err in form.payment_method.errors %}{{ err }}{% endfor %}</p>
+                        {% endif %}
+                    </div>
+
                     <!-- Comment -->
                     <div class="co-card">
                         <p class="co-f__label">Комментарий к заказу</p>
                         <textarea class="co-input form-input co-textarea"
                                   name="{{ form.comment.html_name }}"
-                                  placeholder="Например: позвонить за час до доставки...">{{ form.comment.value|default_if_none:'' }}</textarea>
+                                  placeholder="Например: позвонить для уточнения заказа...">{{ form.comment.value|default_if_none:'' }}</textarea>
                     </div>
                 </section>
 
@@ -330,7 +413,7 @@
 
                             <p class="co-submit__fine" style="margin-top:10px;">
                                 Нажимая кнопку, вы соглашаетесь с условиями
-                                <a class="co-submit__link" href="#">публичной оферты</a>
+                                <a class="co-submit__link" href="{% url 'public_offer' %}">публичной оферты</a>
                             </p>
                             {% else %}
                             <button class="co-pay-btn" type="button" disabled>

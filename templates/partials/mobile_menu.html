@@ -32,7 +32,7 @@
         </a>
       {% endif %}
 
-        <a class="drawer-login" href="#" aria-label="Избранное">
+        <a class="drawer-login" href="{% url 'account_favorites' %}" aria-label="Избранное">
         <i class="far fa-heart"></i>
         <span>Избранное</span>
       </a>
@@ -52,13 +52,15 @@
       <div class="hr"></div>
 
       <p class="drawer__section">Информация</p>
+      <a class="drawer__simple" href="{% url 'how_to_order' %}">Заказ</a>
+      <a class="drawer__simple" href="#">Оплата</a>
       <a class="drawer__simple" href="#">Доставка</a>
-      <a class="drawer__simple" href="#">Гарантия</a>
-      <a class="drawer__simple" href="#">Контакты</a>
     </div>
 
     <div class="drawer__footer">
-      <p><i class="fas fa-phone-alt"></i> +375 (44) 123-45-67</p>
+        <a class="phone" href="tel:{% if company_info %}{{ company_info.phone }}{% else %}+7-495-000-00-00{% endif %}"><i class="fas fa-phone-alt"></i>
+            {% if company_info %}{{ company_info.phone }}{% else %}+7 (495) 000-00-00{% endif %}
+          </a>
       <p><i class="fas fa-map-marker-alt"></i> Минск, ТЦ "Детский мир"</p>
     </div>
   </div>
