@@ -2,6 +2,10 @@ ul li {
     list-style: none;
 }
 
+li {
+    padding-bottom: 10px;
+}
+
 .privacy-header {
   display:flex;
   justify-content:space-between;
@@ -50,7 +54,7 @@ ul li {
 }
 .privacy-section { margin-bottom:22px; }
 .privacy-section h2 { margin-top:0; margin-bottom:10px; font-size:18px; color:var(--text); }
-.privacy-section ol, .privacy-section ul { margin:0 0 0 18px; color:var(--text); line-height:1.5; }
+.privacy-section ol, .privacy-section ul { color:var(--text); line-height:1.5; }
 
 /* small highlight */
 .notice { background: #fff3cd; border-left: 4px solid #f8c945; padding:10px; border-radius:6px; }

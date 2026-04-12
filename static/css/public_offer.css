@@ -2,6 +2,10 @@ ul li {
     list-style: none;
 }
 
+li {
+    padding-bottom: 10px;
+}
+
 .offer-header {
   display:flex;
   justify-content:space-between;
