@@ -1,0 +1,213 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Статус оплаты — {{ site_name|default:"Магазин" }}{% endblock %}
+
+{% block extra_head %}
+<style>
+  .pay-status { max-width:820px; margin:40px auto; background:#fff; padding:24px; border-radius:12px; box-shadow:0 6px 18px rgba(0,0,0,0.04); }
+  .pay-status .status-text { font-weight:800; font-size:20px; margin-bottom:8px; }
+  .pay-status .muted { color:#6b7280; }
+  .btn-retry { margin-top:16px; display:inline-flex; gap:8px; align-items:center; padding:10px 14px; border-radius:10px; background:var(--purple); color:#fff; font-weight:800; border:none; cursor:pointer; }
+  .btn-disabled { opacity:.6; cursor:not-allowed; }
+</style>
+{% endblock %}
+
+{% block content %}
+  <div class="container">
+    <div class="pay-status" id="payStatusBlock" data-order-id="{% if order %}{{ order.public_id }}{% else %} {% endif %}">
+      <div class="status-text" id="statusText">Проверка статуса платежа…</div>
+      <div class="muted" id="statusMessage">Пожалуйста, дождитесь подтверждения платежа.</div>
+
+      <div id="actions" style="margin-top:14px;">
+        <button id="retryBtn" class="btn-retry" style="display:none;">Попробовать оплатить снова</button>
+        <a id="loginHint" href="{% url 'login' %}" style="display:none; margin-left:12px;">Войдите, чтобы повторить оплату</a>
+      </div>
+
+      <div style="margin-top:12px;">
+        <small class="muted">Если долго нет ответа — свяжитесь с поддержкой.</small>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  (function () {
+    // Utility: get cookie (for CSRF)
+    function getCookie(name) {
+      const value = `; ${document.cookie}`;
+      const parts = value.split(`; ${name}=`);
+      if (parts.length === 2) return parts.pop().split(';').shift();
+    }
+
+    // read token from query string (if present) -> used for anonymous retry
+    function getQueryParam(name) {
+      const params = new URLSearchParams(window.location.search);
+      return params.get(name);
+    }
+
+    const orderId = document.getElementById('payStatusBlock').dataset.orderId;
+    if (!orderId) return;
+
+    const statusText = document.getElementById('statusText');
+    const statusMessage = document.getElementById('statusMessage');
+    const retryBtn = document.getElementById('retryBtn');
+    const loginHint = document.getElementById('loginHint');
+
+    // Build API endpoints
+    const STATUS_API = `/api/payments/status/?order_id=${orderId}`;
+    const RETRY_API = `/api/payments/retry/${orderId}/`; // POST
+
+    // Is user authenticated? template-context request available — server sets request context
+    const USER_AUTH = {{ request.user.is_authenticated|yesno:"true,false" }};
+
+    // anonymous token may be present in query string (from email link)
+    const ANON_TOKEN = getQueryParam('token');
+
+    // Polling settings
+    let polling = true;
+    const INTERVAL_MS = 3000;
+    let attempts = 0;
+    const MAX_ATTEMPTS = 10;
+
+    function setUIPending() {
+      statusText.textContent = 'Ожидается оплата';
+      statusMessage.textContent = 'Проверяем статус платежа…';
+      retryBtn.style.display = 'none';
+      loginHint.style.display = 'none';
+    }
+    function setUISuccess() {
+      statusText.textContent = 'Платёж получен';
+      statusMessage.textContent = 'Спасибо! Платёж подтверждён — заказ будет обработан.';
+      retryBtn.style.display = 'none';
+      loginHint.style.display = 'none';
+    }
+    function setUIFailed(msg) {
+      statusText.textContent = 'Платёж не пройден';
+      statusMessage.textContent = msg || 'Платёж не был подтверждён. Проверьте данные и попробуйте ещё раз.';
+      // show retry button if allowed
+      // If user is authenticated -> always show retry button.
+      // If anonymous -> show if token exists
+      if (USER_AUTH) {
+        retryBtn.style.display = '';
+        loginHint.style.display = 'none';
+      } else if (ANON_TOKEN) {
+        retryBtn.style.display = '';
+        loginHint.style.display = 'none';
+      } else {
+        // no credentials => prompt to login (or use email link)
+        retryBtn.style.display = 'none';
+        loginHint.style.display = '';
+      }
+    }
+
+    async function fetchStatus() {
+      try {
+        const resp = await fetch(STATUS_API, { credentials: 'same-origin' });
+        if (!resp.ok) {
+          console.error('status api error', resp.status);
+          return null;
+        }
+        const data = await resp.json();
+        return data;
+      } catch (e) {
+        console.error('status fetch err', e);
+        return null;
+      }
+    }
+
+    async function poll() {
+      if (!polling) return;
+      attempts++;
+      const data = await fetchStatus();
+      if (data) {
+        const st = data.status;
+        if (st === 'paid') {
+          setUISuccess();
+          polling = false;
+          // небольшая задержка, затем redirect на success
+          setTimeout(() => {
+            window.location.href = '/checkout/success/' + encodeURIComponent(data.order_public_id || orderId) + '/';
+          }, 1000);
+          return;
+        } else if (st === 'pending') {
+          setUIPending();
+        } else if (st === 'failed') {
+          setUIFailed(data.message || 'Платёж не прошёл');
+          polling = false; // stop polling when failed to let user act
+          return;
+        } else {
+          // other statuses
+          statusText.textContent = 'Статус: ' + st;
+          statusMessage.textContent = data.message || '';
+        }
+      }
+      if (attempts < MAX_ATTEMPTS) {
+        setTimeout(poll, INTERVAL_MS);
+      } else {
+        statusMessage.textContent = 'Время ожидания истёкло. Попробуйте позже.';
+      }
+    }
+
+    // retry click handler
+    retryBtn.addEventListener('click', async function () {
+      retryBtn.disabled = true;
+      retryBtn.classList.add('btn-disabled');
+      statusMessage.textContent = 'Идёт создание новой попытки оплаты…';
+      try {
+        let resp, data;
+        if (USER_AUTH) {
+          // authenticated: send POST with credentials and CSRF
+          resp = await fetch(RETRY_API, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {
+              'X-CSRFToken': getCookie('csrftoken'),
+              'Accept': 'application/json',
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({}), // no body required for auth-case
+          });
+          data = await resp.json();
+        } else {
+          // anonymous: must provide token (from query param)
+          const token = ANON_TOKEN;
+          if (!token) {
+            statusMessage.textContent = 'Недостаточно данных для повторной оплаты. Проверьте ссылку в почте или войдите в аккаунт.';
+            retryBtn.disabled = false;
+            retryBtn.classList.remove('btn-disabled');
+            return;
+          }
+          // Send token; endpoint is csrf_exempt for anon token
+          resp = await fetch(RETRY_API + '?token=' + encodeURIComponent(token), {
+            method: 'POST',
+            credentials: 'same-origin', // not necessary, but harmless
+            headers: {
+              'Accept': 'application/json',
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ token: token }),
+          });
+          data = await resp.json();
+        }
+
+        if (resp.ok && data.payment_create_url) {
+          // redirect to payment_create (server will render auto-submit to gateway)
+          window.location.href = data.payment_create_url;
+        } else {
+          // error handling
+          statusMessage.textContent = data.error || data.detail || 'Не удалось создать платёж. Свяжитесь со службой поддержки.';
+          retryBtn.disabled = false;
+          retryBtn.classList.remove('btn-disabled');
+        }
+      } catch (err) {
+        console.error(err);
+        statusMessage.textContent = 'Ошибка при создании оплаты. Попробуйте ещё раз.';
+        retryBtn.disabled = false;
+        retryBtn.classList.remove('btn-disabled');
+      }
+    });
+
+    // стартуем polling
+    poll();
+  })();
+  </script>
+{% endblock %}

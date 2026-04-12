@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Информация о доставке{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'css/delivery_info.css' %}">
+{% endblock %}
+
+{% block content %}
+<main class="delivery-page">
+  <div class="container">
+    <nav class="pi-breadcrumbs" aria-label="Навигация">
+      <a href="{% url 'home' %}">Главная</a>
+      <span class="sep">›</span>
+      <span>Информация о доставке</span>
+    </nav>
+
+    <header class="pi-header">
+      <h1>Информация о доставке</h1>
+      <p class="pi-intro">Наш интернет-магазин доставит купленный вами товар в любой населённый пункт Республики Беларусь.</p>
+      <p class="pi-attention"><strong>Внимание:</strong> для подтверждения и отправки заказа обязательно укажите: ФИО, адрес, номер телефона и почтовый индекс.</p>
+      <p>На данный момент доступны 2 варианта доставки: <strong>Белпочта</strong> и <strong>Европочта</strong>.</p>
+    </header>
+
+    <nav class="pi-toc" aria-label="Оглавление">
+      <ul>
+        <li><a href="#belpochta">1. Доставка РУП «Белпочта»</a></li>
+        <li><a href="#evropochta">2. Доставка «ЕВРОПОЧТА»</a></li>
+        <li><a href="#terms">Условия и сроки</a></li>
+        <li><a href="#documents">Документы при получении</a></li>
+        <li><a href="#support">Контакты службы поддержки</a></li>
+      </ul>
+    </nav>
+
+    <section id="belpochta" class="pi-section">
+      <h2>1. Доставка РУП «Белпочта»</h2>
+
+      <h3>Стоимость доставки</h3>
+      <ul class="pi-list">
+          <li>Формируется в зависимости от веса и адреса доставки</li>
+      </ul>
+
+      <h3>Сроки и отправка</h3>
+      <ul class="pi-list">
+        <li>Отправляем заказы 2 раза в неделю.</li>
+        <li>Срок доставки: <strong>2–4 дня</strong> (без учёта дня отправки и выходных почтовых отделений).</li>
+        <li>Срок хранения посылки на отделении — <strong>10 дней</strong>.</li>
+      </ul>
+
+      <h3>Отслеживание</h3>
+      <p>После отправки вы получите SMS с кодом для отслеживания посылки на сайте Белпочты: <a href="https://webservices.belpost.by/searchRu" target="_blank" rel="noopener" style="color: var(--purple)">https://webservices.belpost.by/searchRu</a>.</p>
+
+      <p class="pi-note">По прибытию на почтовое отделение вы также получите SMS/Viber‑уведомление от РУП «Белпочта».</p>
+    </section>
+
+    <section id="evropochta" class="pi-section">
+      <h2>2. Доставка «ЕВРОПОЧТА»</h2>
+
+      <h3>Стоимость доставки</h3>
+      <ul class="pi-list">
+          <li>Формируется в зависимости от веса и адреса доставки</li>
+      </ul>
+
+      <h3>Особенности и комиссия</h3>
+      <p>При выборе «Оплата при получении» (наложенный платёж) при доставке Европочтой взимается комиссия за перевод: <strong>1.5% от суммы, но не менее 0.30 BYN</strong>. При других способах оплаты дополнительных платежей не взимается.</p>
+
+      <h3>Сроки и хранение</h3>
+      <ul class="pi-list">
+        <li>Отправляем заказы 2 раза в неделю.</li>
+        <li>Срок доставки: <strong>3–4 дня</strong> (без учёта дня отправки).</li>
+        <li>Бесплатный срок хранения — <strong>7 дней</strong>; далее платное хранение до 30 дней.</li>
+      </ul>
+
+      <h3>Где посмотреть отделения</h3>
+      <p>Адреса отделений: <a href="https://evropochta.by/about/offices/" target="_blank" rel="noopener" style="color: var(--purple)">https://evropochta.by/about/offices/</a></p>
+
+      <p class="pi-note">Отправка возможна только в города, где есть отделения Европочты.</p>
+    </section>
+
+    <section id="terms" class="pi-section">
+      <h2>Условия и важные моменты</h2>
+      <ul class="pi-list">
+        <li>Оформление заказа подтверждает согласие с указанными условиями.</li>
+        <li>Весь товар продаётся и оплачивается только в белорусских рублях (BYN).</li>
+        <li>Договор между магазином и покупателем заключается путём оформления заказа (в соответствии с действующим законодательством РБ).</li>
+        <li>Покупатель вправе отказаться от заказа до передачи товара при условии возмещения продавцу расходов, связанных с доставкой.</li>
+        <li>Если товар не был передан покупателю по его вине, повторная доставка производится после оплаты повторной доставки покупателем.</li>
+      </ul>
+    </section>
+
+    <section id="documents" class="pi-section">
+      <h2>Документы при получении</h2>
+      <p>При получении посылки предъявите документ, удостоверяющий личность:</p>
+      <ul class="pi-list">
+        <li>паспорт;</li>
+        <li>вид на жительство;</li>
+        <li>удостоверение беженца;</li>
+        <li>водительское удостоверение;</li>
+        <li>военный билет (для военнослужащих срочной службы).</li>
+      </ul>
+    </section>
+
+    <section id="support" class="pi-section">
+      <h2>Контакты и поддержка</h2>
+      <p>Если у вас возникли вопросы по доставке или вы не получили заказ — обратитесь в службу поддержки:</p>
+      <ul class="pi-list">
+        <li>Телефон: <a href="tel:{{ company_info.phone }}">{{ company_info.phone }}</a></li>
+        <li>Email: <a href="mailto:{{ company_info.email }}">{{ company_info.email }}</a></li>
+      </ul>
+    </section>
+
+    <footer class="pi-footer">
+      <p>Перейти к <a href="{% url 'checkout' %}" style="color: var(--purple)">оформлению заказа</a></p>
+    </footer>
+  </div>
+</main>
+{% endblock %}

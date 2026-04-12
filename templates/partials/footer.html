@@ -8,9 +8,9 @@
       <nav class="footer-nav" aria-label="Навигация в футере">
         {# дублируем основное меню; замените href на реальные урлы #}
         <a href="{% url 'catalog' %}">Каталог</a>
-        <a href="#">О компании</a>
-        <a href=#">Контакты</a>
-        <a href="#">Помощь</a>
+        <a href="{% url 'how_to_order' %}">Заказ</a>
+        <a href="{% url 'payments_info' %}">Оплата</a>
+        <a href="{% url 'delivery_info' %}">Доставка</a>
       </nav>
     </div>
 

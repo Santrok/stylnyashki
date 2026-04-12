@@ -288,42 +288,52 @@
                         </div>
 
                         <div class="co-payment-choices">
-                            <label class="co-payment-btn">
-                                <input type="radio"
-                                       data-payment-radio
-                                       name="{% if form.payment_method %}{{ form.payment_method.html_name }}{% else %}payment_method{% endif %}"
-                                       value="cod"
-                                       {% if form.payment_method.value == "cod" or not form.payment_method.value %}checked{% endif %}>
-                                <span class="co-payment-btn__content">
+  {% comment %} payment_methods — список кортежей (value, icon_class, label) можно задать прямо в шаблоне или передать из view {% endcomment %}
+  {% with pm=available_payment_methods %}
+    <label class="co-payment-btn {% if not pm.cod %}is-disabled{% endif %}" title="{% if not pm.cod %}Временно недоступно{% endif %}">
+      <input
+        type="radio"
+        data-payment-radio
+        name="{{ form.payment_method.html_name }}"
+        value="cod"
+        {% if form.payment_method.value == "cod" or not form.payment_method.value %}checked{% endif %}
+        {% if not pm.cod %}disabled{% endif %}>
+      <span class="co-payment-btn__content">
         <i class="fas fa-money-bill-wave" aria-hidden="true"></i>
         <span>При получении (наложенный платеж)</span>
       </span>
-                            </label>
+      {% if not pm.cod %}
+        <span class="co-payment-badge">Временно недоступно</span>
+      {% endif %}
+    </label>
 
-                            <label class="co-payment-btn">
-                                <input type="radio"
-                                       data-payment-radio
-                                       name="{% if form.payment_method %}{{ form.payment_method.html_name }}{% else %}payment_method{% endif %}"
-                                       value="erip"
-                                       {% if form.payment_method.value == "erip" %}checked{% endif %}>
-                                <span class="co-payment-btn__content">
+    <label class="co-payment-btn {% if not pm.erip %}is-disabled{% endif %}" title="{% if not pm.erip %}Временно недоступно{% endif %}">
+      <input type="radio" data-payment-radio name="{{ form.payment_method.html_name }}" value="erip"
+             {% if form.payment_method.value == "erip" %}checked{% endif %}
+             {% if not pm.erip %}disabled{% endif %}>
+      <span class="co-payment-btn__content">
         <i class="fas fa-receipt" aria-hidden="true"></i>
-        <span>АИС "Расчет" (ЕРИП)</span>
+        <span>АИС "Расчёт" (ЕРИП)</span>
       </span>
-                            </label>
+      {% if not pm.erip %}
+        <span class="co-payment-badge">Временно недоступно</span>
+      {% endif %}
+    </label>
 
-                            <label class="co-payment-btn">
-                                <input type="radio"
-                                       data-payment-radio
-                                       name="{% if form.payment_method %}{{ form.payment_method.html_name }}{% else %}payment_method{% endif %}"
-                                       value="card"
-                                       {% if form.payment_method.value == "card" %}checked{% endif %}>
-                                <span class="co-payment-btn__content">
+    <label class="co-payment-btn {% if not pm.card %}is-disabled{% endif %}" title="{% if not pm.card %}Временно недоступно{% endif %}">
+      <input type="radio" data-payment-radio name="{{ form.payment_method.html_name }}" value="card"
+             {% if form.payment_method.value == "card" %}checked{% endif %}
+             {% if not pm.card %}disabled{% endif %}>
+      <span class="co-payment-btn__content">
         <i class="fas fa-credit-card" aria-hidden="true"></i>
         <span>Онлайн картой</span>
       </span>
-                            </label>
-                        </div>
+      {% if not pm.card %}
+        <span class="co-payment-badge">Временно недоступно</span>
+      {% endif %}
+    </label>
+  {% endwith %}
+</div>
 
                         <div class="co-payment-panels">
                             <div class="co-payment-panel" data-payment-panel="cod">

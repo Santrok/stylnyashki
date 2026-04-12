@@ -4,13 +4,14 @@ from itertools import groupby
 from operator import attrgetter
 
 from django import forms
+from django.conf import settings
 from django.contrib.auth import authenticate, password_validation
 from django.contrib.auth.models import User
 from django.contrib.auth.validators import UnicodeUsernameValidator
 from django.core.exceptions import ValidationError
 from django.forms.models import ModelChoiceIterator, ModelChoiceField
 
-from .models import Address, Order, SizeOption, Category, Product
+from .models import Address, Order, SizeOption, Category, Product, SiteConfiguration
 
 username_validator = UnicodeUsernameValidator()
 
@@ -304,6 +305,29 @@ class CheckoutForm(forms.Form):
     europost_branch_number = forms.CharField(max_length=32, required=False, label="Номер отделения Европочты")
 
     comment = forms.CharField(required=False, widget=forms.Textarea, label="Комментарий")
+
+    def __init__(self, *args, available_payment_methods=None, **kwargs):
+        """
+        available_payment_methods — словарь вида {'cod': True, 'erip': False, 'card': False}
+        Если не передан — берём из SiteConfiguration.get_solo().
+        """
+        super().__init__(*args, **kwargs)
+
+        if available_payment_methods is None:
+            cfg = SiteConfiguration.get_solo()
+            available_payment_methods = {
+                "cod": bool(cfg.payment_cod),
+                "erip": bool(cfg.payment_erip),
+                "card": bool(cfg.payment_card),
+            }
+
+        self.available_payment_methods = available_payment_methods
+
+    def clean_payment_method(self):
+        pm = self.cleaned_data.get("payment_method")
+        if not self.available_payment_methods.get(pm, False):
+            raise ValidationError("Выбранный способ оплаты временно недоступен. Пожалуйста, выберите другой.")
+        return pm
 
     def clean_phone(self):
         return normalize_by_phone(self.cleaned_data.get("phone"))

@@ -5,6 +5,7 @@ import uuid
 from django.db import models
 from django.contrib.auth import get_user_model
 from django.core.validators import MinValueValidator, MaxValueValidator
+from django.utils import timezone
 from mptt.admin import DraggableMPTTAdmin
 from mptt.fields import TreeForeignKey
 from mptt.models import MPTTModel
@@ -308,6 +309,32 @@ class Order(models.Model):
         ERIP = "erip", "АИС \"Расчёт\" (ЕРИП)"
         CARD = "card", "Онлайн картой"
 
+    class PaymentStatus(models.TextChoices):
+        PENDING = "pending", "Ожидается"
+        PAID = "paid", "Оплачен"
+        FAILED = "failed", "Неудача"
+        REFUNDED = "refunded", "Возврат"
+
+    payment_method = models.CharField(
+        "Способ оплаты",
+        max_length=16,
+        choices=PaymentMethod.choices,
+        default=PaymentMethod.COD,
+    )
+
+    payment_status = models.CharField(
+        "Статус оплаты",
+        max_length=16,
+        choices=PaymentStatus.choices,
+        default=PaymentStatus.PENDING,
+    )
+
+    # идентификатор платежа шлюза (при наличии)
+    payment_id = models.CharField("ИД платежа (шлюз)", max_length=128, blank=True, default="", db_index=True)
+    paid_at = models.DateTimeField("Дата оплаты", null=True, blank=True)
+
+    retry_token = models.UUIDField("Токен повторной оплаты", default=uuid.uuid4, editable=False, db_index=True)
+
     order_number = models.CharField(
         "Номер заказа",
         max_length=32,
@@ -339,13 +366,6 @@ class Order(models.Model):
         "Тип доставки",
         max_length=16,
         choices=DeliveryType.choices,
-    )
-
-    payment_method = models.CharField(
-        "Способ оплаты",
-        max_length=16,
-        choices=PaymentMethod.choices,
-        default=PaymentMethod.COD,
     )
 
     last_name = models.CharField("Фамилия", max_length=150)
@@ -479,6 +499,75 @@ class OrderItem(models.Model):
         return (self.price or Decimal("0.00")) * self.quantity
 
 
+class Payment(models.Model):
+    """
+    Модель для учета платёжных транзакций, связанных с заказами.
+    Хранит данные по каждой попытке / сессии оплаты через шлюз.
+    """
+    class Status(models.TextChoices):
+        PENDING = "pending", "Ожидается"
+        PAID = "paid", "Оплачен"
+        FAILED = "failed", "Неудача"
+        REFUNDED = "refunded", "Возврат"
+
+    order = models.ForeignKey(Order, related_name="payments", on_delete=models.CASCADE, verbose_name="Заказ")
+    gateway = models.CharField("Платёжный шлюз", max_length=64, default="webpay")  # 'webpay' пока
+    gateway_payment_id = models.CharField("ИД в шлюзе", max_length=128, blank=True, default="", db_index=True)
+    amount = models.DecimalField("Сумма", max_digits=12, decimal_places=2, default=Decimal("0.00"))
+    currency = models.CharField("Валюта", max_length=8, default="BYN")
+    status = models.CharField("Статус", max_length=16, choices=Status.choices, default=Status.PENDING)
+    payload = models.JSONField("Данные платежа (raw)", null=True, blank=True)  # raw request/response для аудита
+    created_at = models.DateTimeField("Создан", auto_now_add=True)
+    updated_at = models.DateTimeField("Обновлён", auto_now=True)
+    paid_at = models.DateTimeField("Дата оплаты", null=True, blank=True)
+
+    class Meta:
+        verbose_name = "Платёж"
+        verbose_name_plural = "Платежи"
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"Payment #{self.pk} ({self.gateway}) order={self.order_id} amount={self.amount} {self.currency}"
+
+    def mark_paid(self, payload: dict | None = None):
+        """
+        Отметить платёж как оплаченный: обновляем запись Payment и агрегируем состояние в Order.
+        payload — опционально: сырые данные от шлюза (webhook).
+        """
+        self.status = self.Status.PAID
+        self.paid_at = timezone.now()
+        if payload is not None:
+            self.payload = payload
+        self.save(update_fields=["status", "paid_at", "payload", "updated_at"])
+
+        # Обновляем статус заказа (агрегированно)
+        order = self.order
+        order.payment_status = Order.PaymentStatus.PAID
+        order.payment_id = self.gateway_payment_id or order.payment_id
+        order.paid_at = self.paid_at
+        # Переводим заказ в CONFIRMED (или другую логику — обсуждается)
+        order.status = Order.Status.CONFIRMED
+        order.save(update_fields=["payment_status", "payment_id", "paid_at", "status"])
+
+    def mark_failed(self, payload: dict | None = None):
+        """Отметить платёж как неудачный."""
+        self.status = self.Status.FAILED
+        if payload is not None:
+            self.payload = payload
+        self.save(update_fields=["status", "payload", "updated_at"])
+
+    def mark_refunded(self, payload: dict | None = None):
+        """Отметить платёж как возвращённый/возврат."""
+        self.status = self.Status.REFUNDED
+        if payload is not None:
+            self.payload = payload
+        self.save(update_fields=["status", "payload", "updated_at"])
+        # при возврате — обновите order.payment_status по вашей политике
+        order = self.order
+        order.payment_status = Order.PaymentStatus.REFUNDED
+        order.save(update_fields=["payment_status"])
+
+
 class CompanyInfo(models.Model):
     name = models.CharField("Наименование", max_length=250, default='ООО «Стиль-Няшки»')
     director = models.CharField("Руководитель", max_length=250, blank=True, default='Макодай А.П.')
@@ -505,3 +594,21 @@ class CompanyInfo(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class SiteConfiguration(models.Model):
+    payment_cod = models.BooleanField("Наложенный платеж (COD)", default=True)
+    payment_erip = models.BooleanField("АИС «Расчёт» (ЕРИП)", default=False)
+    payment_card = models.BooleanField("Онлайн картой (Webpay)", default=False)
+
+    class Meta:
+        verbose_name = "Конфигурация сайта"
+        verbose_name_plural = "Конфигурация сайта"
+
+    def __str__(self):
+        return "Конфигурация сайта"
+
+    @classmethod
+    def get_solo(cls):
+        obj, created = cls.objects.get_or_create(pk=1, defaults={})
+        return obj

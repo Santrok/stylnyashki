@@ -1,0 +1,6 @@
+Здравствуйте {{ order.first_name }}!
+
+Платёж по заказу {{ order.order_number }} не прошёл.
+Пожалуйста, попробуйте оплатить снова: {{ site_url }}/payments/return/?order_id={{ order.public_id }}
+
+Если проблема сохраняется, свяжитесь с нами.

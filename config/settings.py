@@ -112,12 +112,22 @@ LOGOUT_REDIRECT_URL = '/'
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "rest_framework.authentication.SessionAuthentication",
+        'rest_framework.authentication.BasicAuthentication',
     ],
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.AllowAny",
     ],
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 20,
+    'DEFAULT_THROTTLE_CLASSES': (
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle',
+    ),
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': '30/min',  # статус — 30 req/min для анонимов (polling)
+        'user': '60/min',  # авторизованные — 60 req/min
+        'retry': '5/min',  # можно использовать кастомный throttle для retry (см. ниже)
+    }
 }
 
 EMAIL_BACKEND = env_keys.get("EMAIL_BACKEND")
@@ -133,3 +143,15 @@ RESERVE_TTL_MINUTES = 60
 
 TELEGRAM_BOT_TOKEN = env_keys.get("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_NEW_ORDER_CHAT_ID = env_keys.get("TELEGRAM_NEW_ORDER_CHAT_ID", "")
+
+SITE_URL = env_keys.get("SITE_URL", "https://stylnashki.by")
+
+WEBPAY = {
+    "MERCHANT_ID": env_keys.get("WEBPAY_MERCHANT_ID", ""),  # из Webpay
+    "SECRET_KEY": env_keys.get("WEBPAY_SECRET_KEY", "1"),  # секретный ключ
+    "PAYMENT_URL": env_keys.get("WEBPAY_PAYMENT_URL", "https://pay.webpay.by/checkout"),  # пример
+    "API_URL": env_keys.get("WEBPAY_API_URL", "https://api.webpay.by"),  # если нужен
+    "RETURN_URL": SITE_URL + "/payments/return/",
+    "CALLBACK_URL": SITE_URL + "/payments/webhook/",
+    "CURRENCY": "BYN",
+}

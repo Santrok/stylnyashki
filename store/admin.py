@@ -1,7 +1,9 @@
 """Admin registrations for store models."""
 import csv
+from datetime import timezone
 
 from django.contrib import admin
+from django.core.cache import cache
 from django.db.models import ExpressionWrapper, F, Value, DecimalField
 from django.http import HttpResponse
 from django.urls import reverse
@@ -10,7 +12,8 @@ from django.utils.safestring import mark_safe
 from mptt.admin import DraggableMPTTAdmin, TreeRelatedFieldListFilter
 from django.utils.translation import gettext_lazy as _
 
-from .models import Product, SizeOption, Cart, CartItem, Category, Order, CompanyInfo, OrderItem
+from .models import Product, SizeOption, Cart, CartItem, Category, Order, CompanyInfo, OrderItem, Payment, \
+    SiteConfiguration
 
 
 @admin.register(SizeOption)
@@ -255,11 +258,22 @@ class OrderItemInline(admin.TabularInline):
     can_delete = False
     show_change_link = False
 
-
-
     def has_add_permission(self, request, obj):
         # обычно позиции создаются из публичной части/логики магазина, не из админки
         return False
+
+
+class PaymentInline(admin.TabularInline):
+    """
+    Встраиваемый Inline для платежей, связанных с заказом.
+    Позволяет видеть все попытки/сессии платежей прямо в форме заказа.
+    """
+    model = Payment
+    fields = ("gateway", "gateway_payment_id", "amount", "currency", "status", "paid_at", "created_at")
+    readonly_fields = ("gateway", "gateway_payment_id", "amount", "currency", "status", "paid_at", "created_at", "payload")
+    extra = 0
+    can_delete = False
+    show_change_link = True
 
 
 @admin.register(Order)
@@ -270,29 +284,34 @@ class OrderAdmin(admin.ModelAdmin):
         'user_display',
         'total',
         'status_badge',
+        'payment_status_badge',
+        'payment_method',
         'delivery_type',
         'created_at',
     )
-    list_filter = ('status', 'delivery_type', 'created_at')
+    list_filter = ('status', 'delivery_type', 'payment_status', 'payment_method', 'created_at')
     search_fields = ('order_number', 'public_id', 'user__email', 'first_name', 'last_name', 'phone')
-    readonly_fields = ('order_number', 'public_id', 'created_at', 'updated_at', 'subtotal', 'total')
+    readonly_fields = ('order_number', 'public_id', 'created_at', 'updated_at', 'subtotal', 'total', 'paid_at', 'payment_id')
     ordering = ('-created_at',)
-    inlines = [OrderItemInline]
-    actions = ['make_confirmed', 'make_canceled']
+    inlines = [OrderItemInline, PaymentInline]
+    actions = ['make_confirmed', 'make_canceled', 'mark_paid', 'mark_refunded']
     list_select_related = ('user',)
 
     fieldsets = (
         ('Основное', {
-            'fields': ('order_number', 'public_id', 'user', 'status', 'delivery_type')
+            'fields': ('order_number', 'public_id', 'user', 'status', 'delivery_type', 'payment_method')
         }),
         ('Получатель', {
-            'fields': ('last_name', 'first_name', 'middle_name', 'phone', 'instagram')
+            'fields': ('last_name', 'first_name', 'middle_name', 'phone', 'instagram', 'email')
         }),
         ('Адрес доставки (Почта)', {
             'fields': ('postal_index', 'city', 'street', 'house', 'apartment'),
         }),
         ('Адрес доставки (Европочта)', {
             'fields': ('europost_branch_number',),
+        }),
+        ('Оплата', {
+            'fields': ('payment_status', 'payment_id', 'paid_at'),
         }),
         ('Суммы', {
             'fields': ('subtotal', 'delivery_price', 'total'),
@@ -313,7 +332,7 @@ class OrderAdmin(admin.ModelAdmin):
 
     def status_badge(self, obj):
         """
-        Отображение статуса с цветом.
+        Отображение статуса заказа с цветом.
         """
         color_map = {
             Order.Status.NEW: '#f3f4f6',         # серый фон
@@ -335,10 +354,36 @@ class OrderAdmin(admin.ModelAdmin):
     status_badge.short_description = 'Статус'
     status_badge.admin_order_field = 'status'
 
+    def payment_status_badge(self, obj):
+        """
+        Отображение статуса оплаты с цветом (агрегированное поле на уровне заказа).
+        """
+        color_map = {
+            Order.PaymentStatus.PENDING: '#FEF3C7',  # желтоватый
+            Order.PaymentStatus.PAID: '#ECFDF5',     # зелёный
+            Order.PaymentStatus.FAILED: '#FFF1F2',   # красный
+            Order.PaymentStatus.REFUNDED: '#EFF6FF', # синий/пурпурный
+        }
+        text_color_map = {
+            Order.PaymentStatus.PENDING: '#92400E',
+            Order.PaymentStatus.PAID: '#065F46',
+            Order.PaymentStatus.FAILED: '#7F1D1D',
+            Order.PaymentStatus.REFUNDED: '#1E3A8A',
+        }
+        bg = color_map.get(obj.payment_status, '#f3f4f6')
+        color = text_color_map.get(obj.payment_status, '#111827')
+        label = obj.get_payment_status_display() if hasattr(obj, 'get_payment_status_display') else obj.payment_status
+        return format_html(
+            '<span style="display:inline-block;padding:4px 10px;border-radius:10px;background:{};color:{};font-weight:800;">{}</span>',
+            bg, color, label
+        )
+    payment_status_badge.short_description = 'Оплата'
+    payment_status_badge.admin_order_field = 'payment_status'
+
     # Admin actions
     def make_confirmed(self, request, queryset):
         updated = queryset.update(status=Order.Status.CONFIRMED)
-        self.message_user(request, f'Отмечено как "Подтверждён" {updated} заказ(ов).')
+        self.message_user(request, f'Отмечено как "Под��верждён" {updated} заказ(ов).')
     make_confirmed.short_description = 'Пометить как Подтверждён'
 
     def make_canceled(self, request, queryset):
@@ -346,10 +391,41 @@ class OrderAdmin(admin.ModelAdmin):
         self.message_user(request, f'Отмечено как "Отменён" {updated} заказ(ов).')
     make_canceled.short_description = 'Пометить как Отменён'
 
+    def mark_paid(self, request, queryset):
+        """
+        Админ-действие: отметить выбранные заказы как оплаченные.
+        Это полезно для ручной корректировки (только для админа).
+        В продакшн основной механизм — webhook от шлюза.
+        """
+        now = timezone.now()
+        count = 0
+        for order in queryset:
+            order.payment_status = Order.PaymentStatus.PAID
+            order.paid_at = now
+            order.payment_id = order.payment_id or ""  # оставим как есть, можно заполнить вручную
+            order.status = Order.Status.CONFIRMED
+            order.save(update_fields=['payment_status', 'paid_at', 'payment_id', 'status'])
+            count += 1
+        self.message_user(request, f'Помечено как оплаченные {count} заказ(ов).')
+    mark_paid.short_description = 'Отметить как Оплаченный'
+
+    def mark_refunded(self, request, queryset):
+        """
+        Админ-действие: отметить как возвращённые/возврат (payment_status = REFUNDED).
+        """
+        count = 0
+        for order in queryset:
+            order.payment_status = Order.PaymentStatus.REFUNDED
+            order.save(update_fields=['payment_status'])
+            count += 1
+        self.message_user(request, f'Помечено как возвращённые {count} заказ(ов).')
+    mark_refunded.short_description = 'Отметить как Возвращённый'
+
     # оптимизация queryset
     def get_queryset(self, request):
         qs = super().get_queryset(request)
-        return qs.select_related('user')
+        # select_related для ускорения JOIN по user + prefetch payments
+        return qs.select_related('user').prefetch_related('payments')
 
     # опция — в списке кликаем по номеру заказа, попадаем в change form
     # можно добавить ссылку на публичную страницу заказа по public_id
@@ -357,3 +433,25 @@ class OrderAdmin(admin.ModelAdmin):
         url = reverse('account_order_detail', args=[obj.public_id])
         return format_html('<a href="{}" target="_blank">Открыть (публично)</a>', url)
     public_order_link.short_description = 'Публичная страница'
+
+
+@admin.register(Payment)
+class PaymentAdmin(admin.ModelAdmin):
+    list_display = ("id", "order", "gateway", "gateway_payment_id", "amount", "currency", "status", "created_at", "paid_at")
+    list_filter = ("gateway", "status", "created_at")
+    search_fields = ("gateway_payment_id", "order__order_number", "order__public_id", "order__id")
+    readonly_fields = ("payload",)
+
+
+@admin.register(SiteConfiguration)
+class SiteConfigurationAdmin(admin.ModelAdmin):
+    list_display = ("id", "payment_cod", "payment_erip", "payment_card")
+    # ограничьте добавление новых записей:
+    def has_add_permission(self, request):
+        # разрешаем добавить только если записей нет
+        return SiteConfiguration.objects.count() == 0
+
+    def save_model(self, request, obj, form, change):
+        """При сохранении сбрасываем кэш конфигурации."""
+        super().save_model(request, obj, form, change)
+        cache.delete("site_config_singleton")

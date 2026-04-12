@@ -1,0 +1,13 @@
+.payments-page .pi-breadcrumbs { margin: 18px 0; color: #6b7280; font-size: 14px; }
+.pi-header { margin-bottom: 18px; }
+.pi-intro { color:#374151; margin-top:6px; }
+.pi-toc { margin: 18px 0 28px; padding:12px; background:#f9fafb; border-radius:8px; }
+.pi-toc ul { margin:0; padding:0 0 0 18px; }
+.pi-section { margin:28px 0; padding:18px; border-radius:8px; background:#fff; box-shadow: 0 6px 18px rgba(2,6,23,0.03); }
+.pi-section h2 { margin-top:0; }
+.pi-list { margin:10px 0 0 18px; color:#374151; }
+.pi-steps { margin:10px 0 0 18px; }
+.pi-pre { background:#0f1724; color:#fff; padding:12px; border-radius:6px; overflow:auto; font-family: monospace; }
+.pi-note { margin-top:12px; color:#6b7280; }
+.pi-warning { margin-top:12px; color:#7f1d1d; background:#fff1f2; padding:10px; border-radius:6px; }
+.pi-footer { margin-top:18px; border-top:1px dashed #e6e6e6; padding-top:12px; color:#6b7280; }

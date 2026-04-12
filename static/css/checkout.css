@@ -626,7 +626,8 @@
   cursor:pointer;
   transition: box-shadow .12s ease, transform .08s ease, border-color .12s ease;
   user-select:none;
-  min-width:180px;
+  min-width:400px;
+    justify-content: space-between;
 }
 .co-payment-btn input { display:none; }
 .co-payment-btn__content { display:flex; align-items:center; gap:10px; font-weight:800; color:var(--text); }
@@ -651,4 +652,32 @@
 @media (max-width:640px) {
   .co-payment-choices { gap:8px; }
   .co-payment-btn { min-width: calc(50% - 8px); padding:10px; }
+}
+
+/* disabled payment option */
+.co-payment-btn.is-disabled {
+  opacity: 0.48;
+  filter: grayscale(20%);
+  cursor: not-allowed;
+  border-color: #ececec;
+  background: #fafafa;
+  pointer-events: auto; /* сохраним, чтобы tooltip показывался; но input внутри отключён */
+}
+
+/* Если хотите запретить все клики по label, включите pointer-events: none; но тогда тултип не сработает */
+.co-payment-btn.is-disabled .co-payment-btn__content {
+  color: #6b7280; /* muted */
+}
+
+/* бейдж "Временно недоступно" */
+.co-payment-badge {
+  display:inline-block;
+  margin-left:8px;
+  background:#F3F4F6;
+  color:#374151;
+  font-size:12px;
+  padding:3px 8px;
+  border-radius:999px;
+  font-weight:700;
+  vertical-align:middle;
 }

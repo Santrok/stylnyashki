@@ -1,0 +1,8 @@
+Здравствуйте {{ order.first_name }}!
+
+Платёж по заказу {{ order.order_number }} успешно получен.
+Сумма: {{ payment.amount }} {{ payment.currency }}.
+
+Детали заказа: {{ site_url }}/orders/{{ order.public_id }}
+
+Спасибо, что выбрали {{ site_name }}.

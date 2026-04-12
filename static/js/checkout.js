@@ -80,3 +80,16 @@
     });
   });
 })();
+
+document.addEventListener('click', function (e) {
+  const lbl = e.target.closest('.co-payment-btn.is-disabled');
+  if (!lbl) return;
+  // предотвращаем любые действия и показываем короткое сообщение
+  e.preventDefault();
+  // Можно показать ваш кастомный tooltip/modal или toast
+  const title = lbl.getAttribute('title') || 'Временно недоступно';
+  // простой визуальный фидбек:
+  lbl.classList.add('shake'); // если есть CSS-анимация shake
+  setTimeout(() => lbl.classList.remove('shake'), 600);
+
+});

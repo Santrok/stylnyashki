@@ -1,5 +1,6 @@
 from django.urls import path
 from . import views
+from .payments import PaymentStatusAPIView, PaymentRetryAPIView
 from .views import BulkProductUploadAPIView
 
 urlpatterns = [
@@ -15,4 +16,8 @@ urlpatterns = [
     path("cart/toggle/", views.CartToggleAPIView.as_view(), name="api_cart_toggle"),
 
     path('staff/products/bulk-upload/', BulkProductUploadAPIView.as_view(), name='api_products_bulk_upload'),
+
+#     раскомментировать при подключении оплаты картой
+#     path('payments/status/', PaymentStatusAPIView.as_view(), name='api_payment_status'),
+#     path('payments/retry/<uuid:order_public_id>/', PaymentRetryAPIView.as_view(), name='api_payment_retry'),
 ]

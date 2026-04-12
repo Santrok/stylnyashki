@@ -1,10 +1,9 @@
-"""
-Views for the Стильняшки store.
+import hashlib
+import hmac
+import json
 
-Includes:
-- Server-rendered page views (home, catalog, cart, checkout, account, auth)
-- DRF API viewsets (products, cart)
-"""
+from django.core.cache import cache
+from django.views.decorators.csrf import csrf_exempt
 from tools.telegram_notification import send_telegram_notification
 import logging
 from django.conf import settings
@@ -36,16 +35,16 @@ from rest_framework.permissions import IsAuthenticatedOrReadOnly
 
 from .forms import RegisterForm, LoginForm, AccountForm, PostalAddressForm, EuropostAddressForm, CheckoutForm, \
     ProductBulkForm, OrderStatusForm
-from .models import Product, SizeOption, Cart, CartItem, Category, Address, Order, OrderItem, FavoriteItem
+from .models import Product, SizeOption, Cart, CartItem, Category, Address, Order, OrderItem, FavoriteItem, Payment, \
+    SiteConfiguration
 from .serializers import (
     ProductSerializer, ProductListSerializer,
     CartSerializer, CartItemSerializer,
 )
 from .services.favorites import get_or_create_favorite
+from .services.payments import build_webpay_form_data
 from .services.merge import merge_cart_on_login, merge_favorites_on_login
 from .utils import _build_pagination_pages
-
-
 
 logger = logging.getLogger(__name__)
 
@@ -185,6 +184,18 @@ def cart_page(request):
 
 
 def checkout_view(request):
+    # Установка доступных способов оплаты
+    cfg = cache.get("site_config_singleton")
+    if cfg is None:
+        cfg_obj = SiteConfiguration.get_solo()
+        cfg = {
+            "cod": bool(cfg_obj.payment_cod),
+            "erip": bool(cfg_obj.payment_erip),
+            "card": bool(cfg_obj.payment_card),
+        }
+        cache.set("site_config_singleton", cfg, 86400)
+    available_payment_methods = cfg
+
     cart = get_or_create_cart(request)
 
     all_cart_items_qs = cart.items.select_related("product", "size").all()
@@ -300,7 +311,7 @@ def checkout_view(request):
 
     # Если POST — final submit
     if request.method == "POST":
-        form = CheckoutForm(request.POST)
+        form = CheckoutForm(request.POST, available_payment_methods=available_payment_methods)
 
 
         # Нечего оформлять
@@ -403,11 +414,23 @@ def checkout_view(request):
                     transaction.on_commit(lambda: send_telegram_notification(order, request=request))
                 except Exception:
                     # на всякий случай логируем; не мешаем оформлению заказа
-                    logger.exception("Failed to schedule telegram notification for order %s", order.pk)
+                    logger.exception("Не удалось запланировать уведомление в Telegram для заказа. %s", order.pk)
 
-            return redirect("checkout_success", public_id=order.public_id)
+                # раскомментировать при подключении оплаты картой
+                # if cd.get("payment_method") == Order.PaymentMethod.CARD:
+                #     payment = Payment.objects.create(
+                #         order=order,
+                #         gateway="webpay",
+                #         amount=order.total,
+                #         currency=settings.WEBPAY.get("CURRENCY", "BYN"),
+                #         status=Payment.Status.PENDING,
+                #     )
+                #     return redirect("payment_create", payment_id=payment.pk)
+                # else:
+                #     return redirect("checkout_success", public_id=order.public_id)
+                return redirect("checkout_success", public_id=order.public_id)
     else:
-        form = CheckoutForm(initial=build_initial())
+        form = CheckoutForm(initial=build_initial(), available_payment_methods=available_payment_methods)
 
     delivery_price = Decimal("0.00")
     total_with_delivery = total_sum + delivery_price
@@ -425,7 +448,109 @@ def checkout_view(request):
         "delivery_price": delivery_price,
         "total_with_delivery": total_with_delivery,
         "selected_item_ids": selected_item_ids,
+        "available_payment_methods": available_payment_methods,
     })
+
+
+def payment_create_view(request, payment_id):
+    """
+    Рендерим страницу, которая auto-submit'ом отправляет форму на Webpay.
+    """
+    payment = get_object_or_404(Payment, pk=payment_id)
+    # безопасная проверка: разрешаем редирект только если статус pending
+    if payment.status != Payment.Status.PENDING:
+        # уже обработанная попытка — перенаправляем на страницу статуса заказа
+        return redirect("checkout_success", public_id=payment.order.public_id)
+
+    form_data = build_webpay_form_data(payment)
+    return render(request, "payments/redirect_to_webpay.html", {
+        "payment_url": settings.WEBPAY["PAYMENT_URL"],
+        "form_data": form_data,
+    })
+
+
+@csrf_exempt
+def webpay_webhook(request):
+    """
+    Webhook от Webpay. Webpay POST'ит данные о платеже.
+    Надо верифицировать подпись и обновить Payment + Order.
+    ВНИМАНИЕ: формат и схема подписи — по документации Webpay. Здесь пример HMAC-SHA256.
+    """
+    try:
+        payload = json.loads(request.body.decode("utf-8"))
+    except Exception:
+        return HttpResponseBadRequest("invalid_json")
+
+    # пример подписи в заголовке X-Signature (проверьте у Webpay)
+    signature = request.META.get("HTTP_X_SIGNATURE") or request.GET.get("signature")
+    if not signature:
+        return HttpResponseBadRequest("missing_signature")
+
+    # # Пример проверки HMAC-SHA256 от тела
+    expected = hmac.new(settings.WEBPAY["SECRET_KEY"].encode("utf-8"), request.body, hashlib.sha256).hexdigest()
+    if not hmac.compare_digest(expected, signature):
+        return HttpResponseBadRequest("invalid_signature")
+
+    # Пример полей (поменяйте под реальный webhook от Webpay)
+    gw_payment_id = payload.get("payment_id") or payload.get("transaction_id")
+    order_pub_id = payload.get("order_id")
+    amount = payload.get("amount")
+    status = payload.get("status")  # ожидаем 'paid' или подобное
+
+    if not order_pub_id:
+        return HttpResponseBadRequest("missing_order")
+
+    try:
+        order = Order.objects.get(public_id=order_pub_id)
+    except Order.DoesNotExist:
+        return HttpResponseBadRequest("unknown_order")
+
+    # Находим запись Payment (по gateway_payment_id или по order / pending)
+    payment = None
+    if gw_payment_id:
+        payment = Payment.objects.filter(gateway_payment_id=gw_payment_id).first()
+    if not payment:
+        # используем последний pending payment для этого заказа
+        payment = Payment.objects.filter(order=order, status=Payment.Status.PENDING).order_by("-created_at").first()
+        if payment and gw_payment_id:
+            payment.gateway_payment_id = gw_payment_id
+            payment.save(update_fields=["gateway_payment_id", "updated_at"])
+
+    if not payment:
+        return HttpResponseBadRequest("payment_not_found")
+
+    # Сверяем сумму (строго)
+    # Приведём к ��троке с двумя знаками
+    try:
+        if float(amount) != float(payment.amount):
+            # логирование/уведомление - несоответствие суммы
+            return HttpResponseBadRequest("amount_mismatch")
+    except Exception:
+        return HttpResponseBadRequest("amount_invalid")
+
+    # Обрабатываем статус
+    if status in ("paid", "success", "completed"):  # возможные варианты
+        payment.mark_paid(payload=payload)
+        return JsonResponse({"result": "ok"})
+    else:
+        payment.mark_failed(payload=payload)
+        return JsonResponse({"result": "failed"})
+
+
+def payment_return(request):
+    """
+    Return URL — пользователь возвращается сюда после оплаты (редирект со шлюза).
+    Решающее слово за webhook; здесь мы просто показываем страницу ожидания/статуса.
+    """
+    order_id = request.GET.get("order_id") or request.GET.get("order")
+    # если получен public_id, найдем заказ и покажем короткую страницу
+    order = None
+    if order_id:
+        try:
+            order = Order.objects.get(public_id=order_id)
+        except Order.DoesNotExist:
+            order = None
+    return render(request, "payments/return.html", {"order": order})
 
 
 def checkout_success_view(request, public_id):
@@ -733,10 +858,6 @@ def logout_view(request):
     logout(request)
     return redirect('home')
 
-
-# ---------------------------------------------------------------------------
-# Cart actions (non-API)
-# ---------------------------------------------------------------------------
 
 def cart_add(request, product_id):
     """Add a product to the cart (POST); redirect back to cart."""
