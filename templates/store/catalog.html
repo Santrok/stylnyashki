@@ -262,6 +262,7 @@
                   <p class="p-card__name">{{ p.name }}</p>
 
                   <div class="p-card__meta">
+                      <span class="meta-pill">{{ p.category.get_root }}</span>
                     {% for s in p.sizes.all|slice:":2" %}
                       <span class="meta-pill">{{ s }}</span>
                     {% endfor %}
@@ -270,10 +271,10 @@
                   <div class="p-card__bottom">
                     <div class="p-card__price ">
                       {% if p.discount %}
-                        <span class="price-old">{{ p.price|floatformat:0 }} <span class="by-currency-old">ƃ</span></span>
-                        <span class="price-new price-new--red">{{ p.discounted_price|floatformat:0 }} <span class="by-currency">ƃ</span></span>
+                        <span class="price-old">{{ p.price|floatformat:0 }}<span class="by-currency-old">ƃ</span></span>
+                        <span class="price-new price-new--red">{{ p.discounted_price|floatformat:0 }}<span class="by-currency">ƃ</span></span>
                       {% else %}
-                        <span class="price-new">{{ p.price|floatformat:0 }} <span class="by-currency">ƃ</span></span>
+                        <span class="price-new">{{ p.price|floatformat:0 }}<span class="by-currency">ƃ</span></span>
                       {% endif %}
                     </div>
 

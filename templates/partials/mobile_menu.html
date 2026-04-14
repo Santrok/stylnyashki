@@ -1,67 +1,76 @@
 {% load static %}
 <div id="mobileMenu" class="overlay" aria-hidden="true">
-  <div class="drawer" role="dialog" aria-modal="true" aria-label="Меню">
-    <div class="drawer__header">
-      <div class="logo">
-        <div class="logo__img">
-          <img alt="Логотип" src="{% static 'img/logo.svg' %}" />
+    <div class="drawer" role="dialog" aria-modal="true" aria-label="Меню">
+        <div class="drawer__header">
+            <div class="logo">
+                <div class="logo__img">
+                    <img alt="Логотип" src="{% static 'img/logo.svg' %}"/>
+                </div>
+                <div class="logo__text">
+                    <p class="logo__brand">
+                        <span class="c-purple">Сти</span><span class="c-red">льНя</span><span
+                            class="c-yellow">шки</span>
+                    </p>
+                    <p class="logo__tagline">Second Hand for Kids</p>
+                </div>
+            </div>
+
+            <button id="menuCloseBtn" class="icon-btn" aria-label="Закрыть меню">
+                <i class="fas fa-times"></i>
+            </button>
         </div>
-        <div class="logo__text">
-          <p class="logo__brand">
-            <span class="c-purple">Сти</span><span class="c-red">льНя</span><span class="c-yellow">шки</span>
-          </p>
-          <p class="logo__tagline">Second Hand for Kids</p>
+
+        <div class="drawer__body">
+            {% if user.is_authenticated %}
+            <a class="drawer-login" href="{% url 'account' %}">
+                <i class="far fa-user"></i>
+                <span>{{ user.first_name|default:user.username }}</span>
+            </a>
+            {% else %}
+            <a class="drawer-login" href="{% url 'login' %}">
+                <i class="far fa-user"></i>
+                <span>Вход</span>
+            </a>
+            {% endif %}
+
+            <a class="drawer-login" href="{% url 'catalog' %}" aria-label="Каталог">
+                <i class="fas fa-th-large" aria-hidden="true"></i>
+                <span>Каталог</span>
+            </a>
+
+            <a class="drawer-login" href="{% url 'account_favorites' %}" aria-label="Избранное">
+                <i class="far fa-heart"></i>
+                <span>Избранное</span>
+            </a>
+
+            <a class="drawer-login" href="{% url 'cart' %}" aria-label="Корзина">
+                <i class="fas fa-shopping-bag"></i>
+                <span>Корзина</span>
+            </a>
+
+            <p class="drawer__section">Категории</p>
+            {% for category in categories %}
+            <a class="drawer__link  drawer__link--{{ category.icon_background_class|cut:'cat-card--' }}"
+               href="{% url 'catalog' %}?category={{category.slug}}" data-close-menu>
+                <span>{{ category.title }}</span><i class="fas fa-chevron-right"></i>
+            </a>
+            {% endfor %}
+
+            <div class="hr"></div>
+
+            <p class="drawer__section">Информация</p>
+            <a class="drawer__simple" href="{% url 'how_to_order' %}">Заказ</a>
+            <a class="drawer__simple" href="{% url 'payments_info' %}}">Оплата</a>
+            <a class="drawer__simple" href="{% url 'delivery_info' %}">Доставка</a>
         </div>
-      </div>
 
-      <button id="menuCloseBtn" class="icon-btn" aria-label="Закрыть меню">
-        <i class="fas fa-times"></i>
-      </button>
+        <div class="drawer__footer">
+            <a class="phone"
+               href="tel:{% if company_info %}{{ company_info.phone }}{% else %}+7-495-000-00-00{% endif %}"><i
+                    class="fas fa-phone-alt"></i>
+                {% if company_info %}{{ company_info.phone }}{% else %}+7 (495) 000-00-00{% endif %}
+            </a>
+            <p><i class="fas fa-map-marker-alt"></i> Минск, ТЦ "Детский мир"</p>
+        </div>
     </div>
-
-    <div class="drawer__body">
-      {% if user.is_authenticated %}
-        <a class="drawer-login" href="{% url 'account' %}">
-          <i class="far fa-user"></i>
-          <span>{{ user.first_name|default:user.username }}</span>
-        </a>
-      {% else %}
-        <a class="drawer-login" href="{% url 'login' %}">
-          <i class="far fa-user"></i>
-          <span>Вход</span>
-        </a>
-      {% endif %}
-
-        <a class="drawer-login" href="{% url 'account_favorites' %}" aria-label="Избранное">
-        <i class="far fa-heart"></i>
-        <span>Избранное</span>
-      </a>
-
-      <a class="drawer-login" href="{% url 'cart' %}" aria-label="Корзина">
-        <i class="fas fa-shopping-bag"></i>
-        <span>Корзина</span>
-      </a>
-
-      <p class="drawer__section">Категории</p>
-        {% for category in categories %}
-      <a class="drawer__link  drawer__link--{{ category.icon_background_class|cut:'cat-card--' }}" href="{% url 'catalog' %}?category={{category.slug}}" data-close-menu>
-        <span>{{ category.title }}</span><i class="fas fa-chevron-right"></i>
-      </a>
-        {% endfor %}
-
-      <div class="hr"></div>
-
-      <p class="drawer__section">Информация</p>
-      <a class="drawer__simple" href="{% url 'how_to_order' %}">Заказ</a>
-      <a class="drawer__simple" href="{% url 'payments_info' %}}">Оплата</a>
-      <a class="drawer__simple" href="{% url 'delivery_info' %}">Доставка</a>
-    </div>
-
-    <div class="drawer__footer">
-        <a class="phone" href="tel:{% if company_info %}{{ company_info.phone }}{% else %}+7-495-000-00-00{% endif %}"><i class="fas fa-phone-alt"></i>
-            {% if company_info %}{{ company_info.phone }}{% else %}+7 (495) 000-00-00{% endif %}
-          </a>
-      <p><i class="fas fa-map-marker-alt"></i> Минск, ТЦ "Детский мир"</p>
-    </div>
-  </div>
 </div>

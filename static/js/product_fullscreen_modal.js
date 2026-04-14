@@ -67,10 +67,10 @@ function openProductModal(card) {
 
   if (discount > 0) {
     if (pmPriceOld) { pmPriceOld.style.display = ''; pmPriceOld.textContent = `${price} ƃ`; }
-    if (pmPrice) pmPrice.textContent = `${discounted} ƃ`;
+    if (pmPrice) pmPrice.textContent = `${discounted}ƃ`;
   } else {
     if (pmPriceOld) { pmPriceOld.style.display = 'none'; pmPriceOld.textContent = ''; }
-    if (pmPrice) pmPrice.textContent = `${price} ƃ`;
+    if (pmPrice) pmPrice.textContent = `${price}ƃ`;
   }
 
   modal.classList.remove('is-leaving');
