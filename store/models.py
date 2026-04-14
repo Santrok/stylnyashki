@@ -63,18 +63,6 @@ class Category(MPTTModel):
 class Product(models.Model):
     """
     Represents a product in the store catalogue.
-
-    Fields:
-        name       – product title (название)
-        brand      – brand name
-        category   – e.g. 'Платья', 'Блузки'
-        season     – e.g. 'Лето', 'Зима'
-        price      – base price in rubles
-        discount   – discount percentage 0-100
-        is_active  – visibility flag (активность)
-        created_at – auto-set on creation (дата добавления)
-        sizes      – M2M link to available SizeOption records
-        image      – optional product photo
     """
 
     class Status(models.TextChoices):

@@ -1,0 +1,10 @@
+/* admin_changelist_filters_mobile_simple.css */
+@media (max-width: 900px) {
+  .admin-changelist-filter-mobile-top-simple {
+    width: 100% !important;
+    box-sizing: border-box;
+    margin-bottom: 12px;
+    background: transparent; /* или #fff если нужно */
+    padding: 0; /* не меняем внутренние отступы, чтобы не ломать админ-стили */
+  }
+}

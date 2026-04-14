@@ -57,6 +57,12 @@
             <span>Добавление товаров</span>
           </a>
             {% endif %}
+            {% if user.is_superuser %}
+            <a class="account-nav__item {% block nav_admin_active %}{% endblock %}" href="{% url 'admin:index' %}">
+            <i class="fas fa-cog account-nav__icon" aria-hidden="true"></i>
+            <span>Админка</span>
+          </a>
+            {% endif %}
         </nav>
 
         <div class="account-sidebar__foot">

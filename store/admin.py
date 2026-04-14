@@ -31,6 +31,109 @@ class CartItemInline(admin.TabularInline):
     extra = 0
     readonly_fields = ['subtotal']
 
+class SizeOptionFilter(admin.SimpleListFilter):
+    """
+    Фильтр по размерам (SizeOption). Выводит все доступные значения SizeOption.value
+    и фильтрует товары, у которых в M2M поле sizes присутствует выбранный размер.
+    """
+    title = "Размер"
+    parameter_name = "size"
+
+    def lookups(self, request, model_admin):
+        # возвращаем кортежи (значение, отображение)
+        qs = SizeOption.objects.all().order_by('sort', 'value')
+        return [(s.value, str(s)) for s in qs]
+
+    def queryset(self, request, queryset):
+        val = self.value()
+        if not val:
+            return queryset
+        # фильтруем по связям M2M sizes по полю value
+        return queryset.filter(sizes__value=val).distinct()
+
+class HeightListFilter(admin.SimpleListFilter):
+    title = _("Рост")
+    parameter_name = "height"
+
+    def _get_size_model_and_field(self, model):
+        """
+        Возвращает (model_class, field_name) для поиска значений роста.
+        Сначала проверяем связанное M2M поле 'sizes' у модели product (если есть),
+        затем пробуем поля непосредственно в модели Product: 'growth' или 'height'.
+        """
+        # 1) М2М sizes -> remote model
+        try:
+            sizes_field = model._meta.get_field('sizes')
+            size_model = sizes_field.remote_field.model
+            # ищем поле в модели размера
+            if hasattr(size_model, 'growth'):
+                return size_model, 'growth'
+            if hasattr(size_model, 'height'):
+                return size_model, 'height'
+        except Exception:
+            size_model = None
+
+        # 2) Попробуем сам Product на поля growth / height
+        if hasattr(model, 'growth'):
+            return model, 'growth'
+        if hasattr(model, 'height'):
+            return model, 'height'
+
+        return None, None
+
+    def lookups(self, request, model_admin):
+        """
+        Возвращает список кортежей (value, verbose) для фильтрации.
+        Берём distinct значения из соответствующего поля.
+        """
+        model = model_admin.model
+        size_model, field_name = self._get_size_model_and_field(model)
+        if not size_model or not field_name:
+            return []
+
+        # получаем distinct значения
+        qs = size_model.objects.order_by(field_name).values_list(field_name, flat=True).distinct()
+        # отфильтруем None и пустые
+        choices = []
+        for v in qs:
+            if v is None or (isinstance(v, str) and v.strip() == ""):
+                continue
+            # значение ��риводим к строке для параметра в URL
+            choices.append((str(v), str(v)))
+        return choices
+
+    def queryset(self, request, queryset):
+        """
+        Фильтрует queryset по выбранному значению.
+        Попытка привести значение к int/float, если возможно.
+        """
+        val = self.value()
+        if not val:
+            return queryset
+
+        model = queryset.model
+        size_model, field_name = self._get_size_model_and_field(model)
+        if not size_model or not field_name:
+            return queryset
+
+        # попытка привести к числу (int или float), иначе оставляем строкой
+        cast_val = val
+        try:
+            cast_val = int(val)
+        except Exception:
+            try:
+                cast_val = float(val)
+            except Exception:
+                cast_val = val
+
+        # если поле находится в связанной модели sizes (M2M)
+        try:
+            sizes_field = model._meta.get_field('sizes')
+            # фильтруем по sizes__<field_name>
+            return queryset.filter(**{f'sizes__{field_name}': cast_val}).distinct()
+        except Exception:
+            # иначе пробуем фильтр по самому полю модели Product
+            return queryset.filter(**{field_name: cast_val}).distinct()
 
 class CategoryTreeRelatedFieldListFilter(TreeRelatedFieldListFilter):
     title = 'Категория'
@@ -74,16 +177,22 @@ class ProductAdmin(admin.ModelAdmin):
                 dp = obj.price
         return dp
 
+    @admin.display(description='Размеры')
+    def sizes_list(self, obj):
+        # выводим отображение SizeOption.__str__
+        return ", ".join([str(s) for s in obj.sizes.all()])
+
     list_display = [
         'name',
         'thumbnail',
         'category',
-        'brand',
-        'price',
-        'discount',
-        'discounted_price_display',
-        'is_active',
+        'sizes_list',
         'status',
+        # 'brand',
+        'price',
+        # 'discount',
+        # 'discounted_price_display',
+        'is_active',
         'created_at',
     ]
 
@@ -93,10 +202,12 @@ class ProductAdmin(admin.ModelAdmin):
         ('category', CategoryTreeRelatedFieldListFilter) if CategoryTreeRelatedFieldListFilter else 'category',
         'brand',
         'season',
+        HeightListFilter,
+        SizeOptionFilter,
         'status',
     ]
     search_fields = ['name', 'brand', 'category__name']
-    list_editable = ['is_active', 'discount']
+    list_editable = ['is_active', 'status']
     filter_horizontal = ['sizes']
     date_hierarchy = 'created_at'
     list_select_related = ('category',)
