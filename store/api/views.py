@@ -1,5 +1,6 @@
 import os
 import time
+import logging
 from decimal import Decimal
 
 from django.utils.text import slugify
@@ -16,8 +17,16 @@ from .serializers import CartItemSerializer, FavoriteItemSerializer, BulkProduct
 from ..services.favorites import get_or_create_favorite
 from ..utils import convert_uploaded_image_to_avif_content
 
+MAX_FILE_SIZE = 12 * 1024 * 1024  # 12 MB per file limit on server side
+MAX_FILES_PER_REQUEST = 50  # server accepts up to 50 files per request (client should batch)
+
+# Logger
+logger = logging.getLogger(__name__)  # либо "store.views.bulk_upload" если хотите явно
 
 def cart_summary(cart):
+    """
+    Формирует краткую сводку корзины: количество позиций, общее количество и сумма.
+    """
     items = cart.items.select_related("product", "size").all()
     return {
         "items_count": items.count(),
@@ -39,6 +48,7 @@ class CartRetrieveAPIView(APIView):
 class CartAddItemAPIView(APIView):
     """
     POST: product_id, qty=1, size_id(optional)
+    Добавляет товар в корзину или увеличивает количество, если позиция уже есть.
     """
     def post(self, request):
         cart = get_or_create_cart(request)
@@ -72,6 +82,7 @@ class CartAddItemAPIView(APIView):
 class CartSetQtyAPIView(APIView):
     """
     POST: item_id, qty
+    Устанавливает количество для существующей позиции корзины, удаляет при qty < 1.
     """
     def post(self, request):
         cart = get_or_create_cart(request)
@@ -91,6 +102,7 @@ class CartSetQtyAPIView(APIView):
 class CartRemoveItemAPIView(APIView):
     """
     POST: item_id
+    Удаляет позицию из корзины.
     """
     def post(self, request):
         cart = get_or_create_cart(request)
@@ -99,8 +111,13 @@ class CartRemoveItemAPIView(APIView):
         item.delete()
         return Response({"ok": True, "summary": cart_summary(cart)})
 
+
 def favorites_summary(fav):
+    """
+    Возвращает краткую сводку избранного (количество элементов).
+    """
     return {"count": fav.items.count()}
+
 
 class FavoritesRetrieveAPIView(APIView):
     def get(self, request):
@@ -111,9 +128,11 @@ class FavoritesRetrieveAPIView(APIView):
             "summary": favorites_summary(fav),
         })
 
+
 class FavoritesToggleAPIView(APIView):
     """
     POST: product_id
+    Переключает наличие товара в избранном: добавляет/удаляет.
     """
     def post(self, request):
         fav = get_or_create_favorite(request)
@@ -134,7 +153,11 @@ class FavoritesToggleAPIView(APIView):
             "summary": favorites_summary(fav),
         }, status=status.HTTP_200_OK)
 
+
 class UserStateAPIView(APIView):
+    """
+    Возвращает состояние пользователя: продукты в корзине, избранное и их сводки.
+    """
     def get(self, request):
         cart = get_or_create_cart(request)
         fav = get_or_create_favorite(request)
@@ -153,10 +176,11 @@ class UserStateAPIView(APIView):
             "favorites_summary": favorites_summary(fav),
         })
 
+
 class CartToggleAPIView(APIView):
     """
     POST: product_id
-    Toggle: add (qty=1) or remove item for product (size=None).
+    Переключатель: если товар (без размера) в корзине — удаляет, иначе — добавляет (qty=1).
     """
     def post(self, request):
         cart = get_or_create_cart(request)
@@ -178,36 +202,57 @@ class CartToggleAPIView(APIView):
         }, status=status.HTTP_200_OK)
 
 
-MAX_FILE_SIZE = 12 * 1024 * 1024  # 12 MB per file limit on server side
-MAX_FILES_PER_REQUEST = 50  # server accepts up to 50 files per request (client should batch)
-
 class BulkProductUploadAPIView(APIView):
+    """
+    API для пакетной загрузки товаров (bulk upload).
+    Ожидает multipart/form-data с полями, описанными в BulkProductCommonSerializer и списком файлов 'images'.
+    """
     parser_classes = (MultiPartParser, FormParser)
     permission_classes = (IsAdminUser,)
 
     def post(self, request, format=None):
-        # validate common fields
+        # Валидируем общие поля через сериализатор
         serializer = BulkProductCommonSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
 
         images = request.FILES.getlist("images")
         if not images:
-            return Response({"created": 0, "errors": ["No image files provided under 'images'"]},
-                            status=status.HTTP_400_BAD_REQUEST)
+            logger.warning(
+                "Попытка пакетной загрузки без файлов. Пользователь id=%s",
+                getattr(request.user, 'pk', None)
+            )
+            return Response(
+                {"created": 0, "errors": ["No image files provided under 'images'"]},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
         if len(images) > MAX_FILES_PER_REQUEST:
-            return Response({"created": 0, "errors": [f"Too many files in one request; max {MAX_FILES_PER_REQUEST} allowed"]},
-                            status=status.HTTP_400_BAD_REQUEST)
+            logger.warning(
+                "Попытка пакетной загрузки с превышением количества файлов: %d (пользователь id=%s)",
+                len(images),
+                getattr(request.user, 'pk', None)
+            )
+            return Response(
+                {"created": 0, "errors": [f"Too many files in one request; max {MAX_FILES_PER_REQUEST} allowed"]},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
-        # resolve category if provided
+        # Разрешаем категорию, если передана
         category = None
         if data.get("category_id"):
             try:
                 category = Category.objects.get(pk=int(data["category_id"]))
             except Category.DoesNotExist:
-                return Response({"created": 0, "errors": [f"Category id {data['category_id']} not found"]},
-                                status=status.HTTP_400_BAD_REQUEST)
+                logger.warning(
+                    "Bulk upload: категория с id=%s не найдена (пользователь id=%s)",
+                    data.get("category_id"),
+                    getattr(request.user, 'pk', None)
+                )
+                return Response(
+                    {"created": 0, "errors": [f"Category id {data['category_id']} not found"]},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
 
         sizes_qs = SizeOption.objects.filter(id__in=data.get("sizes", [])) if data.get("sizes") else None
 
@@ -216,14 +261,32 @@ class BulkProductUploadAPIView(APIView):
         base_safe = slugify(data["name"]) or "product"
         timestamp = int(time.time())
 
+        logger.info(
+            "Начало пакетной загрузки: пользователь id=%s, файлов=%d, имя товара='%s'",
+            getattr(request.user, 'pk', None),
+            len(images),
+            data.get("name")
+        )
+
         for idx, uploaded in enumerate(images):
             p = None
             try:
-                # file size guard
+                logger.info(
+                    "Обработка файла: индекс=%d, имя=%s",
+                    idx,
+                    getattr(uploaded, "name", None)
+                )
+
+                # Проверка размера файла
                 if hasattr(uploaded, "size") and uploaded.size and uploaded.size > MAX_FILE_SIZE:
+                    logger.warning(
+                        "Файл '%s' превышает допустимый размер (%d байт). Пропуск.",
+                        getattr(uploaded, "name", ""),
+                        MAX_FILE_SIZE
+                    )
                     raise ValueError(f"File '{uploaded.name}' exceeds max file size ({MAX_FILE_SIZE} bytes)")
 
-                # prepare product fields
+                # Подготовка полей продукта
                 price_val = data.get("price")
                 if price_val is None:
                     price_val = Product._meta.get_field("price").get_default()
@@ -245,24 +308,45 @@ class BulkProductUploadAPIView(APIView):
                 if sizes_qs:
                     p.sizes.set(sizes_qs)
 
-                # attach uploaded file to image field without save (model.save will handle conversion)
+                # Конвертация изображения в AVIF в памяти и сохранение только AVIF-версии
                 filename = f"{base_safe}-{timestamp}-{idx}.avif"
-                # конвертим в памяти в AVIF и сохраняем только AVIF-версию в поле image
                 avif_content = convert_uploaded_image_to_avif_content(uploaded)
                 p.image.save(filename, avif_content, save=False)
 
-                # final save (модель уже содержит avif, дополнительная конвертация в save() не нужна)
+                # Финальное сохранение (модель уже содержит avif)
                 p.save()
 
                 created_ids.append(p.pk)
+                logger.info(
+                    "Создан продукт: id=%s из файла=%s",
+                    p.pk,
+                    getattr(uploaded, "name", None)
+                )
             except Exception as exc:
-                # cleanup if partially created
+                # Логируем исключение с трассировкой
+                logger.exception(
+                    "Ошибка при обработке файла: индекс=%s, имя=%s, ошибка=%s",
+                    idx,
+                    getattr(uploaded, "name", None),
+                    str(exc)
+                )
+                # Пытаемся удалить частично созданный объект, если он есть
                 try:
                     if p and getattr(p, "pk", None):
                         p.delete()
                 except Exception:
-                    pass
+                    logger.exception(
+                        "Не удалось удалить частично созданный объект для файла: индекс=%s, имя=%s",
+                        idx,
+                        getattr(uploaded, "name", None)
+                    )
                 errors.append({"index": idx, "filename": getattr(uploaded, "name", ""), "error": str(exc)})
 
+        logger.info(
+            "Завершение пакетной загрузки: пользователь id=%s, создано=%d, ошибок=%d",
+            getattr(request.user, 'pk', None),
+            len(created_ids),
+            len(errors)
+        )
         return Response({"created": len(created_ids), "created_ids": created_ids, "errors": errors},
                         status=status.HTTP_200_OK)

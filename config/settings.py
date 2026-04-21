@@ -6,8 +6,10 @@ All secrets are read from environment variables (see .env.example).
 """
 
 import os
+import logging
 from pathlib import Path
 from dotenv import dotenv_values
+from logging.handlers import RotatingFileHandler
 
 env_keys = dotenv_values()
 
@@ -39,6 +41,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    "config.middleware.request_id.RequestIDMiddleware"
 ]
 
 ROOT_URLCONF = 'config.urls'
@@ -154,4 +157,89 @@ WEBPAY = {
     "RETURN_URL": SITE_URL + "/payments/return/",
     "CALLBACK_URL": SITE_URL + "/payments/webhook/",
     "CURRENCY": "BYN",
+}
+
+LOG_DIR = os.getenv("LOG_DIR", os.path.join(BASE_DIR, "logs"))
+os.makedirs(LOG_DIR, exist_ok=True)
+
+LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
+LOG_FILE = os.getenv("LOG_FILE", os.path.join(LOG_DIR, "app.log"))
+ERROR_LOG_FILE = os.getenv("ERROR_LOG_FILE", os.path.join(LOG_DIR, "error.log"))
+LOG_MAX_BYTES = int(os.getenv("LOG_MAX_BYTES", 10 * 1024 * 1024))  # 10MB
+LOG_BACKUP_COUNT = int(os.getenv("LOG_BACKUP_COUNT", 5))
+
+# logging configuration
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "filters": {
+        # чтобы в логах был request_id если middleware установит его
+        "request_id": {
+            "()": "config.logging_filters.RequestIDFilter",
+        },
+    },
+    "formatters": {
+        "verbose": {
+            "format": "%(asctime)s [%(levelname)s] [%(name)s] [%(request_id)s] %(message)s (%(pathname)s:%(lineno)d)",
+            "datefmt": "%Y-%m-%d %H:%M:%S",
+        },
+        "simple": {"format": "%(levelname)s %(message)s"},
+    },
+    "handlers": {
+        "console": {
+            "level": LOG_LEVEL,
+            "class": "logging.StreamHandler",
+            "formatter": "verbose",
+            "filters": ["request_id"],
+        },
+        "file": {
+            "level": LOG_LEVEL,
+            "class": "logging.handlers.RotatingFileHandler",
+            "filename": LOG_FILE,
+            "maxBytes": LOG_MAX_BYTES,
+            "backupCount": LOG_BACKUP_COUNT,
+            "formatter": "verbose",
+            "encoding": "utf-8",
+            "filters": ["request_id"],
+        },
+        "error_file": {
+            "level": "ERROR",
+            "class": "logging.handlers.RotatingFileHandler",
+            "filename": ERROR_LOG_FILE,
+            "maxBytes": LOG_MAX_BYTES,
+            "backupCount": LOG_BACKUP_COUNT,
+            "formatter": "verbose",
+            "encoding": "utf-8",
+            "filters": ["request_id"],
+        },
+        "mail_admins": {
+            "level": "ERROR",
+            "class": "django.utils.log.AdminEmailHandler",
+            "include_html": True,
+        },
+    },
+    "loggers": {
+        # корневой логгер (по умолчанию)
+        "": {
+            "handlers": ["file", "error_file"],
+            "level": LOG_LEVEL,
+            "propagate": True,
+        },
+        "django": {
+            "handlers": ["file"],
+            "level": "INFO",
+            "propagate": False,
+        },
+        "django.request": {  # 500 errors reporting via mail_admins
+            "handlers": ["file", "error_file", "mail_admins"],
+            "level": "ERROR",
+            "propagate": False,
+        },
+        # Включи логгер для приложения store (или вашего приложения)
+        "store": {
+            "handlers": [ "file", "error_file"],
+            "level": LOG_LEVEL,
+            "propagate": False,
+        },
+    },
 }
