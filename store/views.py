@@ -950,7 +950,7 @@ def cart_remove(request, item_id):
     return redirect('cart')
 
 
-# @staff_member_required
+@staff_member_required
 def products_bulk_upload_view(request):
     """
     Mobile-friendly bulk upload view (staff only).
