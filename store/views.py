@@ -1,37 +1,40 @@
 import hashlib
 import hmac
 import json
-
-from django.core.cache import cache
-from django.views.decorators.csrf import csrf_exempt
-from tools.telegram_notification import send_telegram_notification
 import logging
-from django.conf import settings
+import os
 from datetime import timedelta
 from decimal import Decimal
 
+from django.conf import settings
+from django.contrib import messages
 from django.contrib.admin.views.decorators import staff_member_required
-from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
-from django.db import transaction
-from django.http import HttpResponseBadRequest, JsonResponse
-from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.models import User
-from django.contrib import messages
+from django.core.cache import cache
+from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
+from django.core.validators import validate_email
+from django.db import transaction
 from django.db.models import Q, Min, Max
+from django.http import HttpResponseBadRequest, JsonResponse
+from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.dateparse import parse_date
-from django.utils.decorators import method_decorator
 from django.utils.http import url_has_allowed_host_and_scheme
+from django.utils.text import slugify
+from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 from django.views.generic import ListView, DetailView
 
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
+from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework.permissions import IsAuthenticatedOrReadOnly, IsAdminUser
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticatedOrReadOnly
+from rest_framework.views import APIView
 
 from .forms import RegisterForm, LoginForm, AccountForm, PostalAddressForm, EuropostAddressForm, CheckoutForm, \
     ProductBulkForm, OrderStatusForm
@@ -45,7 +48,9 @@ from .services.favorites import get_or_create_favorite
 from .services.payments import build_webpay_form_data
 from .services.merge import merge_cart_on_login, merge_favorites_on_login
 from .utils import _build_pagination_pages
+from tools.telegram_notification import send_telegram_notification
 
+# Логгер модуля
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
@@ -53,15 +58,23 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 def get_or_create_cart(request):
-    """Return (or create) the Cart for the current user or anonymous session."""
+    """Возвращает (или создаёт) корзину для текущего пользователя или анонимной сессии."""
     if request.user.is_authenticated:
-        cart, _ = Cart.objects.get_or_create(user=request.user)
+        cart, created = Cart.objects.get_or_create(user=request.user)
+        if created:
+            logger.info("Создана корзина для пользователя id=%s", request.user.pk)
+        else:
+            logger.debug("Найдена корзина для пользователя id=%s", request.user.pk)
     else:
         if not request.session.session_key:
             request.session.create()
-        cart, _ = Cart.objects.get_or_create(session_key=request.session.session_key)
+            logger.debug("Создан session_key для анонимного пользователя")
+        cart, created = Cart.objects.get_or_create(session_key=request.session.session_key)
+        if created:
+            logger.info("Создана корзина для сессии %s", request.session.session_key)
+        else:
+            logger.debug("Найдена корзина для сессии %s", request.session.session_key)
     return cart
-
 
 
 # ---------------------------------------------------------------------------
@@ -71,6 +84,7 @@ def get_or_create_cart(request):
 def home(request):
     """Render the home / landing page with featured products."""
     products = Product.objects.filter(is_active=True, status=Product.Status.AVAILABLE).order_by("?")[:8]
+    logger.debug("Главная страница: подготовлено %d товаров для отображения", len(products))
 
     context = {
         "products": products,
@@ -79,6 +93,9 @@ def home(request):
 
 
 def catalog(request):
+    """
+    Каталог с фильтрацией/пейджингом. Параметры запроса логируются на debug-уровне.
+    """
     base_qs = Product.objects.select_related("category").prefetch_related("sizes").filter(is_active=True, status=Product.Status.AVAILABLE)
     qs = base_qs
 
@@ -106,14 +123,14 @@ def catalog(request):
         try:
             qs = qs.filter(price__gte=float(min_price))
         except ValueError:
-            pass
+            logger.warning("Неверный min_price: %s", min_price)
 
     max_price = request.GET.get("max_price", "").strip()
     if max_price:
         try:
             qs = qs.filter(price__lte=float(max_price))
         except ValueError:
-            pass
+            logger.warning("Неверный max_price: %s", max_price)
 
     root_categories = Category.objects.filter(type="level_1").order_by("tree_id", "lft")
 
@@ -140,6 +157,11 @@ def catalog(request):
     page_obj = paginator.get_page(request.GET.get("page"))
 
     pagination_pages = _build_pagination_pages(page_obj, window=2)
+
+    logger.debug(
+        "Каталог: q=%s category=%s sizes=%s price=[%s,%s] sort=%s page=%s result_count=%d",
+        q, category_slug, selected_sizes, price_min, price_max, sort, request.GET.get("page"), page_obj.paginator.count
+    )
 
     return render(request, "store/catalog.html", {
         "products": page_obj.object_list,
@@ -175,6 +197,9 @@ def cart_page(request):
     total_qty = sum(i.quantity for i in available_items)
     total_sum = sum(i.subtotal for i in available_items)
 
+    logger.debug("Страница корзины: user=%s items_total=%d total_qty=%d total_sum=%s",
+                 getattr(request.user, 'pk', None), items.count(), total_qty, total_sum)
+
     return render(request, 'store/cart.html', {
         'cart': cart,
         'items': items,
@@ -184,6 +209,10 @@ def cart_page(request):
 
 
 def checkout_view(request):
+    """
+    Страница оформления заказа. Подготавливает форму, валидирует выбранные позиции и создаёт заказ.
+    Важные события (недоступные товары, создание заказа) логируются.
+    """
     # Установка доступных способов оплаты
     cfg = cache.get("site_config_singleton")
     if cfg is None:
@@ -194,6 +223,8 @@ def checkout_view(request):
             "card": bool(cfg_obj.payment_card),
         }
         cache.set("site_config_singleton", cfg, 86400)
+        logger.debug("Кэш site_config_singleton заполнен")
+
     available_payment_methods = cfg
 
     cart = get_or_create_cart(request)
@@ -226,6 +257,7 @@ def checkout_view(request):
         # Если ничего не найдено — перенаправляем на корзину с сообщением
         if not selected_items_qs.exists():
             messages.error(request, "Выбранные позиции не найдены в корзине.")
+            logger.warning("Checkout: selected_ids не найдены в корзине user=%s selected=%s", getattr(request.user, 'pk', None), selected_ids)
             return redirect("cart")
 
         # Если среди выбранных есть недоступные по availability — редиректим на страницу unavailable
@@ -239,6 +271,7 @@ def checkout_view(request):
                 availability=CartItem.Availability.RESERVED
             )
             request.session["checkout_unavailable_product_ids"] = bad_product_ids
+            logger.info("Checkout: найдены недоступные выбранные товары user=%s bad_ids=%s", getattr(request.user, 'pk', None), bad_product_ids)
             return redirect("checkout_unavailable")
 
         items_qs = selected_items_qs
@@ -320,6 +353,7 @@ def checkout_view(request):
                 messages.error(request, "В корзине нет доступных товаров для оформления. Недоступные товары отмечены серым.")
             else:
                 messages.error(request, "Корзина пуста. Добавьте товары, чтобы оформить заказ.")
+            logger.warning("Checkout POST: нет доступных товаров user=%s unavailable_count=%d", getattr(request.user, 'pk', None), unavailable_count)
             return redirect("cart")
 
         if form.is_valid():
@@ -351,6 +385,7 @@ def checkout_view(request):
                     )
                     # передаём их ids в сессию для страницы недоступности
                     request.session["checkout_unavailable_product_ids"] = bad_ids
+                    logger.info("Checkout POST: обнаружены недоступные продукты при подтверждении user=%s bad_ids=%s", getattr(request.user, 'pk', None), bad_ids)
                     return redirect("checkout_unavailable")
 
                 # Все необходимые продукты доступны — создаём заказ
@@ -428,6 +463,7 @@ def checkout_view(request):
                 #     return redirect("payment_create", payment_id=payment.pk)
                 # else:
                 #     return redirect("checkout_success", public_id=order.public_id)
+                logger.info("Создан заказ id=%s user=%s total=%s", order.pk, getattr(user, 'pk', None), order.total)
                 return redirect("checkout_success", public_id=order.public_id)
     else:
         form = CheckoutForm(initial=build_initial(), available_payment_methods=available_payment_methods)
@@ -460,9 +496,11 @@ def payment_create_view(request, payment_id):
     # безопасная проверка: разрешаем редирект только если статус pending
     if payment.status != Payment.Status.PENDING:
         # уже обработанная попытка — перенаправляем на страницу статуса заказа
+        logger.warning("Попытка открыть payment_create для платежа в статусе %s id=%s", payment.status, payment.pk)
         return redirect("checkout_success", public_id=payment.order.public_id)
 
     form_data = build_webpay_form_data(payment)
+    logger.debug("Подготовлены данные для Webpay payment_id=%s order=%s", payment.pk, payment.order.pk)
     return render(request, "payments/redirect_to_webpay.html", {
         "payment_url": settings.WEBPAY["PAYMENT_URL"],
         "form_data": form_data,
@@ -476,33 +514,39 @@ def webpay_webhook(request):
     Надо верифицировать подпись и обновить Payment + Order.
     ВНИМАНИЕ: формат и схема подписи — по документации Webpay. Здесь пример HMAC-SHA256.
     """
+    logger.debug("Получен webhook от Webpay: method=%s path=%s", request.method, request.path)
     try:
         payload = json.loads(request.body.decode("utf-8"))
     except Exception:
+        logger.warning("Webhook: некорректный JSON в теле запроса")
         return HttpResponseBadRequest("invalid_json")
 
     # пример подписи в заголовке X-Signature (проверьте у Webpay)
     signature = request.META.get("HTTP_X_SIGNATURE") or request.GET.get("signature")
     if not signature:
+        logger.warning("Webhook: отсутствует подпись (signature header)")
         return HttpResponseBadRequest("missing_signature")
 
     # # Пример проверки HMAC-SHA256 от тела
     expected = hmac.new(settings.WEBPAY["SECRET_KEY"].encode("utf-8"), request.body, hashlib.sha256).hexdigest()
     if not hmac.compare_digest(expected, signature):
+        logger.warning("Webhook: неверная подпись. expected=%s received=%s", expected, signature)
         return HttpResponseBadRequest("invalid_signature")
 
     # Пример полей (поменяйте под реальный webhook от Webpay)
     gw_payment_id = payload.get("payment_id") or payload.get("transaction_id")
     order_pub_id = payload.get("order_id")
     amount = payload.get("amount")
-    status = payload.get("status")  # ожидаем 'paid' или подобное
+    status_payload = payload.get("status")  # ожидаем 'paid' или подобное
 
     if not order_pub_id:
+        logger.warning("Webhook: отсутствует идентификатор заказа в полезной нагрузке")
         return HttpResponseBadRequest("missing_order")
 
     try:
         order = Order.objects.get(public_id=order_pub_id)
     except Order.DoesNotExist:
+        logger.warning("Webhook: заказ с public_id=%s не найден", order_pub_id)
         return HttpResponseBadRequest("unknown_order")
 
     # Находим запись Payment (по gateway_payment_id или по order / pending)
@@ -517,23 +561,27 @@ def webpay_webhook(request):
             payment.save(update_fields=["gateway_payment_id", "updated_at"])
 
     if not payment:
+        logger.warning("Webhook: платеж для заказа %s не найден", order_pub_id)
         return HttpResponseBadRequest("payment_not_found")
 
     # Сверяем сумму (строго)
-    # Приведём к ��троке с двумя знаками
+    # Приведём к строке с двумя знаками
     try:
         if float(amount) != float(payment.amount):
-            # логирование/уведомление - несоответствие суммы
+            logger.warning("Webhook: несоответствие суммы для payment id=%s order=%s payload=%s expected=%s", payment.pk, order_pub_id, amount, payment.amount)
             return HttpResponseBadRequest("amount_mismatch")
     except Exception:
+        logger.warning("Webhook: некорректная сумма в полезной нагрузке: %s", amount)
         return HttpResponseBadRequest("amount_invalid")
 
     # Обрабатываем статус
-    if status in ("paid", "success", "completed"):  # возможные варианты
+    if status_payload in ("paid", "success", "completed"):  # возможные варианты
         payment.mark_paid(payload=payload)
+        logger.info("Webhook: платеж помечен как оплачен payment_id=%s order=%s", payment.pk, order_pub_id)
         return JsonResponse({"result": "ok"})
     else:
         payment.mark_failed(payload=payload)
+        logger.info("Webhook: платеж помечен как неуспешный payment_id=%s order=%s status=%s", payment.pk, order_pub_id, status_payload)
         return JsonResponse({"result": "failed"})
 
 
@@ -548,18 +596,22 @@ def payment_return(request):
     if order_id:
         try:
             order = Order.objects.get(public_id=order_id)
+            logger.debug("Payment return: найден заказ public_id=%s", order_id)
         except Order.DoesNotExist:
+            logger.warning("Payment return: заказ public_id=%s не найден", order_id)
             order = None
     return render(request, "payments/return.html", {"order": order})
 
 
 def checkout_success_view(request, public_id):
     order = get_object_or_404(Order, public_id=public_id)
+    logger.info("Пользователь просмотрел страницу успешного оформления заказа order=%s user=%s", order.pk, getattr(request.user, 'pk', None))
     return render(request, "store/checkout_success.html", {"order": order})
 
 def checkout_unavailable_view(request):
     ids = request.session.pop("checkout_unavailable_product_ids", [])
     products = Product.objects.filter(id__in=ids).only("id", "name", "image", "status")
+    logger.info("Страница unavailable: показаны продукты %s", ids)
     return render(request, "store/checkout_unavailable.html", {
         "products": products,
     })
@@ -589,7 +641,10 @@ def account_view(request):
             update_session_auth_hash(request, request.user)
 
             messages.success(request, "Изменения сохранены.")
+            logger.info("Пользователь обновил профиль user=%s", user.pk)
             return redirect("account")
+        else:
+            logger.debug("Account form invalid for user=%s errors=%s", user.pk, form.errors)
     else:
         form = AccountForm(initial=initial, user=user)
 
@@ -635,6 +690,7 @@ def account_addresses_view(request):
                 obj.type = Address.Type.POST
                 obj.save()
                 messages.success(request, "Почтовый адрес сохранён.")
+                logger.info("Пользователь %s обновил почтовый адрес", user.pk)
                 return redirect("account_addresses")
 
         elif "save_ep" in request.POST:
@@ -647,6 +703,7 @@ def account_addresses_view(request):
                 obj.type = Address.Type.EUROPOST
                 obj.save()
                 messages.success(request, "Адрес Европочты сохранён.")
+                logger.info("Пользователь %s обновил Europost адрес", user.pk)
                 return redirect("account_addresses")
         else:
             # если нажали submit без имени — просто отрисуем обе формы с текущим instance
@@ -685,6 +742,7 @@ def account_orders_view(request):
     except EmptyPage:
         orders_page = paginator.page(paginator.num_pages)
 
+    logger.debug("Список заказов для пользователя %s: страница %s", request.user.pk, page)
     return render(request, 'store/account_orders.html', {
         'orders_page': orders_page,
     })
@@ -713,6 +771,7 @@ def account_order_detail_view(request, public_id):
         sold_products = Product.objects.filter(id__in=product_ids, status=Product.Status.SOLD)
         problem_products = list(sold_products)
 
+    logger.debug("Просмотр деталей заказа user=%s order=%s", request.user.pk, order.pk)
     return render(request, 'store/account_order_detail.html', {
         'order': order,
         'problem_products': problem_products,
@@ -738,6 +797,7 @@ def account_favorites_view(request):
         items_page = paginator.page(1)
     except EmptyPage:
         items_page = paginator.page(paginator.num_pages)
+    logger.debug("Избранное user=%s page=%s count=%d", request.user.pk, page, items_qs.count())
     return render(request, "store/account_favorites.html", {
         "items_page": items_page,
     })
@@ -753,11 +813,12 @@ def favorite_remove_view(request, item_id):
     fi = FavoriteItem.objects.filter(id=item_id, favorite=fav).first()
     if not fi:
         messages.error(request, "Позиция не найдена.")
+        logger.warning("Попытка удалить несуществующий FavoriteItem id=%s user=%s", item_id, request.user.pk)
         return redirect("account_favorites")
 
     fi.delete()
     messages.success(request, "Товар удалён из избранного.")
-    # Возвращаем на ту же страницу (с учётом пагинации можно передать ?page=...)
+    logger.info("Удалено из избранного favorite_item_id=%s user=%s", item_id, request.user.pk)
     return redirect("account_favorites")
 
 
@@ -775,7 +836,7 @@ def favorite_add_to_cart_view(request, item_id):
     # Проверка доступности товара
     if not getattr(product, "is_active", True) or getattr(product, "status", None) == Product.Status.SOLD:
         messages.error(request, "К сожалению, этот товар недоступен для добавления в корзину.")
-        # пометим позицию как удалённую из избранного (опционально) или пометим каким-то статусом — здесь просто оставим
+        logger.warning("Попытка добавить в корзину недоступный товар product=%s user=%s", product.pk, request.user.pk)
         return redirect("account_favorites")
 
     cart = get_or_create_cart(request)
@@ -790,12 +851,13 @@ def favorite_add_to_cart_view(request, item_id):
             CartItem.objects.create(cart=cart, product=product, quantity=1)
     except Exception:
         messages.error(request, "Не удалось добавить товар в корзину. Попробуйте ещё раз.")
+        logger.exception("Ошибка при добавлении favorite->cart product=%s user=%s", product.pk, request.user.pk)
         return redirect("account_favorites")
 
     # Удаляем элемент из избранного (т.к. добавили в корзину)
     fi.delete()
     messages.success(request, "Товар добавлен в корзину.")
-    # Перенаправляем на корзину или остаёмся в избранном — здесь отправим на корзину
+    logger.info("Товар перенесён из избранного в корзину product=%s user=%s", product.pk, request.user.pk)
     return redirect("cart")
 
 
@@ -819,8 +881,11 @@ def login_view(request):
             merge_cart_on_login(request, form.user)
             merge_favorites_on_login(request, form.user)
 
+            logger.info("Пользователь вошёл: user=%s", form.user.pk)
             return redirect(_get_next_url(request))
         # form.errors покажем в шаблоне
+        else:
+            logger.debug("Неудачная попытка логина, errors=%s", form.errors)
     else:
         form = LoginForm(request=request)
 
@@ -844,7 +909,10 @@ def register_view(request):
             merge_favorites_on_login(request, user)
 
             messages.success(request, f'Добро пожаловать, {user.username}!')
+            logger.info("Новый пользователь зарегистрирован id=%s", user.pk)
             return redirect(_get_next_url(request))
+        else:
+            logger.debug("Неудачная регистрация, errors=%s", form.errors)
     else:
         form = RegisterForm()
 
@@ -855,6 +923,7 @@ def register_view(request):
 
 
 def logout_view(request):
+    logger.info("Пользователь вышел id=%s", getattr(request.user, 'pk', None))
     logout(request)
     return redirect('home')
 
@@ -869,6 +938,7 @@ def cart_add(request, product_id):
     if not created:
         item.quantity += 1
         item.save()
+    logger.info("Добавлен товар в корзину product=%s cart=%s created=%s", product.pk, cart.pk if cart else None, created)
     return redirect('cart')
 
 
@@ -876,6 +946,7 @@ def cart_remove(request, item_id):
     """Remove a cart item (POST); redirect back to cart."""
     cart = get_or_create_cart(request)
     CartItem.objects.filter(pk=item_id, cart=cart).delete()
+    logger.info("Удалена позиция из корзины item=%s cart=%s", item_id, cart.pk if cart else None)
     return redirect('cart')
 
 
@@ -900,6 +971,7 @@ def products_bulk_upload_view(request):
     categories = Category.objects.all()[:200]
     sizes = SizeOption.objects.all()
     form = ProductBulkForm()
+    logger.debug("Открыта страница bulk upload пользователем id=%s", getattr(request.user, 'pk', None))
     return render(request, "store/account_products_bulk_upload.html", {"categories2": categories, "sizes": sizes, "form": form})
 
 def staff_required_decorator(view_func):
@@ -961,6 +1033,8 @@ class AccountStaffOrdersListView(ListView):
         order_by = sort_map.get(sort, '-created_at')
         qs = qs.order_by(order_by)
 
+        logger.debug("Список заказов по персоналу: q=%s status=%s delivery=%s date_from=%s date_to=%s sort=%s",
+                     q, status, delivery, date_from, date_to, sort)
         return qs
 
     def get_context_data(self, **kwargs):
@@ -990,8 +1064,9 @@ class AccountStaffOrderDetailView(DetailView):
         ctx = super().get_context_data(**kwargs)
         # Status form for staff to change status via POST on this page
         ctx['status_form'] = OrderStatusForm(instance=self.object)
-        # problem_products: пустой по умолчани��; при необходимости добавьте логику
+        # problem_products: пустой по умолчанию; при необходимости добавьте логику
         ctx['problem_products'] = []
+        logger.debug("Сотрудники просмотрели детали заказа=%s user=%s", self.object.pk, getattr(self.request.user, 'pk', None))
         return ctx
 
 @staff_required_decorator
@@ -1000,15 +1075,19 @@ def account_order_status_update(request, pk):
     order = get_object_or_404(Order, pk=pk)
     new_status = request.POST.get('status')
     if new_status is None:
+        logger.warning("Попытка обновить статус заказа без значения order=%s by user=%s", pk, getattr(request.user, 'pk', None))
         return HttpResponseBadRequest('missing status')
 
     valid_vals = [c[0] for c in Order.Status.choices]
     if valid_vals and new_status not in valid_vals:
+        logger.warning("Попытка установить некорректный статус order=%s value=%s user=%s", pk, new_status, getattr(request.user, 'pk', None))
         return HttpResponseBadRequest('invalid status')
 
     old = order.status
     order.status = new_status
     order.save(update_fields=['status', 'updated_at'])
+
+    logger.info("Статус заказа изменён order=%s old=%s new=%s by user=%s", order.pk, old, order.status, getattr(request.user, 'pk', None))
 
     # Return JSON for AJAX requests, otherwise redirect back to detail
     if request.headers.get('x-requested-with') == 'XMLHttpRequest':
@@ -1041,6 +1120,7 @@ class ProductViewSet(viewsets.ReadOnlyModelViewSet):
         """Support filtering via query params: category, season, brand, q."""
         qs = super().get_queryset()
         params = self.request.query_params
+        logger.debug("API Product list params=%s user=%s", dict(params), getattr(self.request.user, 'pk', None))
         if params.get('category'):
             qs = qs.filter(category=params['category'])
         if params.get('season'):
@@ -1065,6 +1145,7 @@ class CartViewSet(viewsets.ViewSet):
         """Return the current user's (or session's) cart."""
         cart = get_or_create_cart(request)
         serializer = CartSerializer(cart)
+        logger.debug("API cart list for user/session user=%s", getattr(request.user, 'pk', None))
         return Response(serializer.data)
 
     @action(detail=False, methods=['post'])
@@ -1085,6 +1166,7 @@ class CartViewSet(viewsets.ViewSet):
             item.quantity = quantity
         item.save()
 
+        logger.info("API: добавлен/обновлён item cart=%s product=%s qty=%s user=%s", cart.pk if cart else None, product.pk, item.quantity, getattr(request.user, 'pk', None))
         return Response(CartItemSerializer(item).data, status=status.HTTP_200_OK)
 
     @action(detail=True, methods=['delete'])
@@ -1093,4 +1175,5 @@ class CartViewSet(viewsets.ViewSet):
         cart = get_or_create_cart(request)
         item = get_object_or_404(CartItem, pk=pk, cart=cart)
         item.delete()
+        logger.info("API: удалён элемент корзины item=%s cart=%s user=%s", pk, cart.pk if cart else None, getattr(request.user, 'pk', None))
         return Response(status=status.HTTP_204_NO_CONTENT)
