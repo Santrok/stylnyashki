@@ -17,13 +17,13 @@ def forwards(apps, schema_editor):
     SizeOption = apps.get_model("store", "SizeOption")
     db = schema_editor.connection.alias
 
-    for value, age_label in SIZES:
-        sort = int(value)  # для роста всегда число
+    for index, value in enumerate(SIZES):
+        sort = int(index)  # для роста всегда число
 
         SizeOption.objects.using(db).update_or_create(
-            value=value,
+            value=value[0],
             defaults={
-                "age_label": age_label,
+                "age_label": value[1],
                 "sort": sort,
             },
         )

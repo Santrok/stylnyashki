@@ -13,11 +13,11 @@ env_keys = dotenv_values()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-dev-key-change-in-production')
+SECRET_KEY = env_keys.get('SECRET_KEY', 'django-insecure-dev-key-change-in-production')
 
-DEBUG = os.environ.get('DEBUG', 'True') == 'True'
+DEBUG = env_keys.get('DEBUG', 'True') == 'True'
 
-ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost 127.0.0.1').split()
+ALLOWED_HOSTS = env_keys.get('ALLOWED_HOSTS', 'localhost 127.0.0.1').split()
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -66,15 +66,15 @@ WSGI_APPLICATION = 'config.wsgi.application'
 
 # Database
 # Development: SQLite; Production: PostgreSQL via env vars
-if os.environ.get('DATABASE_URL') or os.environ.get('DB_NAME'):
+if env_keys.get('DATABASE_URL') or env_keys.get('DB_NAME'):
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.postgresql',
-            'NAME': os.environ.get('DB_NAME', 'stylnyashki'),
-            'USER': os.environ.get('DB_USER', 'postgres'),
-            'PASSWORD': os.environ.get('DB_PASSWORD', ''),
-            'HOST': os.environ.get('DB_HOST', 'localhost'),
-            'PORT': os.environ.get('DB_PORT', '5432'),
+            'NAME': env_keys.get('DB_NAME', 'stylnyashki'),
+            'USER': env_keys.get('DB_USER', 'postgres'),
+            'PASSWORD': env_keys.get('DB_PASSWORD', ''),
+            'HOST': env_keys.get('DB_HOST', 'localhost'),
+            'PORT': env_keys.get('DB_PORT', '5432'),
         }
     }
 else:
