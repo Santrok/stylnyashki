@@ -112,12 +112,6 @@ class Product(models.Model):
             return round(self.price * (1 - factor), 2)
         return self.price
 
-    def save(self, *args, **kwargs):
-
-        if self.image and not self.image.url.lower().endswith('avif'):
-            convert_image_to_avif(photo=self.image)
-
-        super().save(*args, **kwargs)
 
 class Cart(models.Model):
     """Shopping cart tied to a user session or authenticated user."""

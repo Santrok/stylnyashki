@@ -14,6 +14,7 @@ from ..models import Product, CartItem, SizeOption, FavoriteItem, Category
 from ..services.cart import get_or_create_cart
 from .serializers import CartItemSerializer, FavoriteItemSerializer, BulkProductCommonSerializer
 from ..services.favorites import get_or_create_favorite
+from ..utils import convert_uploaded_image_to_avif_content
 
 
 def cart_summary(cart):
@@ -245,11 +246,12 @@ class BulkProductUploadAPIView(APIView):
                     p.sizes.set(sizes_qs)
 
                 # attach uploaded file to image field without save (model.save will handle conversion)
-                orig_ext = os.path.splitext(uploaded.name)[1] or ""
-                filename = f"{base_safe}-{timestamp}-{idx}{orig_ext}"
-                p.image.save(filename, uploaded, save=False)
+                filename = f"{base_safe}-{timestamp}-{idx}.avif"
+                # конвертим в памяти в AVIF и сохраняем только AVIF-версию в поле image
+                avif_content = convert_uploaded_image_to_avif_content(uploaded)
+                p.image.save(filename, avif_content, save=False)
 
-                # final save triggers model.save override (convert_image_to_avif)
+                # final save (модель уже содержит avif, дополнительная конвертация в save() не нужна)
                 p.save()
 
                 created_ids.append(p.pk)

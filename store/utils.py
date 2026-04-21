@@ -56,3 +56,22 @@ def convert_image_to_avif(photo):
 
     # Обновляем файл в поле photo с новым расширением
     photo.save(new_filename, ContentFile(img_io.read()), save=False)
+
+def convert_uploaded_image_to_avif_content(uploaded_file, quality=80):
+    """
+    Принимает UploadedFile / file-like, конвертирует в AVIF и возвращает ContentFile.
+    Не сохраняет ничего на диск/сторедж.
+    """
+    img = Image.open(uploaded_file)
+    # При необходимости привести в RGB (для некоторых форматов / альфа)
+    if img.mode in ("RGBA", "LA") or (img.mode == "P" and "transparency" in img.info):
+        # Оставим альфа если есть — AVIF поддерживает альфа
+        img = img.convert("RGBA")
+    else:
+        img = img.convert("RGB")
+
+    img_io = BytesIO()
+    # Pillow должен поддерживать AVIF (проверьте наличие плагина pillow-avif-plugin)
+    img.save(img_io, format="AVIF", quality=quality)
+    img_io.seek(0)
+    return ContentFile(img_io.read())
