@@ -159,14 +159,14 @@ WEBPAY = {
     "CURRENCY": "BYN",
 }
 
-LOG_DIR = os.getenv("LOG_DIR", os.path.join(BASE_DIR, "logs"))
+LOG_DIR = env_keys.get("LOG_DIR", os.path.join(BASE_DIR, "logs"))
 os.makedirs(LOG_DIR, exist_ok=True)
 
-LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
-LOG_FILE = os.getenv("LOG_FILE", os.path.join(LOG_DIR, "app.log"))
-ERROR_LOG_FILE = os.getenv("ERROR_LOG_FILE", os.path.join(LOG_DIR, "error.log"))
-LOG_MAX_BYTES = int(os.getenv("LOG_MAX_BYTES", 10 * 1024 * 1024))  # 10MB
-LOG_BACKUP_COUNT = int(os.getenv("LOG_BACKUP_COUNT", 5))
+LOG_LEVEL = env_keys.get("LOG_LEVEL", "INFO").upper()
+LOG_FILE = env_keys.get("LOG_FILE", os.path.join(LOG_DIR, "app.log"))
+ERROR_LOG_FILE = env_keys.get("ERROR_LOG_FILE", os.path.join(LOG_DIR, "error.log"))
+LOG_MAX_BYTES = int(env_keys.get("LOG_MAX_BYTES", 10 * 1024 * 1024))  # 10MB
+LOG_BACKUP_COUNT = int(env_keys.get("LOG_BACKUP_COUNT", 5))
 
 # logging configuration
 LOGGING = {
@@ -243,3 +243,17 @@ LOGGING = {
         },
     },
 }
+
+
+CELERY_BROKER_URL = env_keys.get("CELERY_BROKER_URL", "redis://127.0.0.1:6379/0")
+CELERY_RESULT_BACKEND = env_keys.get("CELERY_RESULT_BACKEND", "redis://127.0.0.1:6379/1")
+
+# дополнительные опции
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_TASK_SERIALIZER = "json"
+CELERY_RESULT_SERIALIZER = "json"
+CELERY_TIMEZONE = TIME_ZONE  # предполагается, что TIME_ZONE задан в settings
+CELERY_TASK_TRACK_STARTED = True
+CELERY_TASK_TIME_LIMIT = 60 * 5  # 5 минут на задачу (по желанию)
+
+BULK_UPLOAD_TMP_DIR = "bulk_tmp"

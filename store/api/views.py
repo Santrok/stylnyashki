@@ -2,7 +2,10 @@ import os
 import time
 import logging
 from decimal import Decimal
+from uuid import uuid4
 
+from django.conf import settings
+from django.core.files.storage import default_storage
 from django.utils.text import slugify
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.permissions import IsAdminUser
@@ -16,6 +19,7 @@ from ..services.cart import get_or_create_cart
 from .serializers import CartItemSerializer, FavoriteItemSerializer, BulkProductCommonSerializer
 from ..services.favorites import get_or_create_favorite
 from ..utils import convert_uploaded_image_to_avif_content
+from ..tasks import process_product_image
 
 MAX_FILE_SIZE = 12 * 1024 * 1024  # 12 MB per file limit on server side
 MAX_FILES_PER_REQUEST = 50  # server accepts up to 50 files per request (client should batch)
@@ -205,7 +209,10 @@ class CartToggleAPIView(APIView):
 class BulkProductUploadAPIView(APIView):
     """
     API для пакетной загрузки товаров (bulk upload).
-    Ожидает multipart/form-data с полями, описанными в BulkProductCommonSerializer и списком файлов 'images'.
+    Принимает multipart/form-data с полями, описанными в BulkProductCommonSerializer и списком файлов 'images'.
+    Вместо синхронной конвертации изображений, сохраняет файлы во временный каталог в storage и ставит задачу Celery,
+    которая выполнит конвертацию в фоне и сохранит avif в поле Product.image.
+    В ответ возвращаем созданные product_id и task_id для каждой задачи.
     """
     parser_classes = (MultiPartParser, FormParser)
     permission_classes = (IsAdminUser,)
@@ -258,6 +265,7 @@ class BulkProductUploadAPIView(APIView):
 
         created_ids = []
         errors = []
+        tasks = []
         base_safe = slugify(data["name"]) or "product"
         timestamp = int(time.time())
 
@@ -268,11 +276,13 @@ class BulkProductUploadAPIView(APIView):
             data.get("name")
         )
 
+        tmp_dir = getattr(settings, "BULK_UPLOAD_TMP_DIR", "bulk_tmp")
+
         for idx, uploaded in enumerate(images):
             p = None
             try:
                 logger.info(
-                    "Обработка файла: индекс=%d, имя=%s",
+                    "Обработка файла: индекс=%d, имя=%s (enqueue task)",
                     idx,
                     getattr(uploaded, "name", None)
                 )
@@ -293,7 +303,8 @@ class BulkProductUploadAPIView(APIView):
                 else:
                     price_val = Decimal(price_val)
 
-                p = Product(
+                # Создаём продукт без изображения (image заполним в фоне)
+                p = Product.objects.create(
                     name=data["name"],
                     brand=data.get("brand"),
                     category=category,
@@ -303,25 +314,27 @@ class BulkProductUploadAPIView(APIView):
                     is_active=bool(data.get("is_active", True)),
                     status=data.get("status", Product.Status.AVAILABLE),
                 )
-                p.save()
 
                 if sizes_qs:
                     p.sizes.set(sizes_qs)
 
-                # Конвертация изображения в AVIF в памяти и сохранение только AVIF-версии
-                filename = f"{base_safe}-{timestamp}-{idx}.avif"
-                avif_content = convert_uploaded_image_to_avif_content(uploaded)
-                p.image.save(filename, avif_content, save=False)
+                # Сохраняем загруженный файл временно в storage (media/bulk_tmp/...)
+                unique_prefix = uuid4().hex
+                safe_name = f"{unique_prefix}_{uploaded.name}"
+                storage_path = f"{tmp_dir}/{safe_name}"
 
-                # Финальное сохранение (модель уже содержит avif)
-                p.save()
+                saved_path = default_storage.save(storage_path, uploaded)
+                logger.debug("Временный файл сохранён: %s (product_id=%s)", saved_path, p.pk)
 
+                # Запускаем фоновую задачу на обработку изображения
+                filename_base = f"{base_safe}-{timestamp}-{idx}"
+                task = process_product_image.delay(saved_path, p.pk, filename_base)
+
+                tasks.append({"product_id": p.pk, "task_id": task.id})
                 created_ids.append(p.pk)
-                logger.info(
-                    "Создан продукт: id=%s из файла=%s",
-                    p.pk,
-                    getattr(uploaded, "name", None)
-                )
+
+                logger.info("Создан продукт id=%s и поставлена задача %s для файла %s", p.pk, task.id, getattr(uploaded, "name", None))
+
             except Exception as exc:
                 # Логируем исключение с трассировкой
                 logger.exception(
@@ -343,10 +356,14 @@ class BulkProductUploadAPIView(APIView):
                 errors.append({"index": idx, "filename": getattr(uploaded, "name", ""), "error": str(exc)})
 
         logger.info(
-            "Завершение пакетной загрузки: пользователь id=%s, создано=%d, ошибок=%d",
+            "Пакетная загрузка завершена (enqueue): пользователь id=%s, создано=%d задач=%d, ошибок=%d",
             getattr(request.user, 'pk', None),
             len(created_ids),
+            len(tasks),
             len(errors)
         )
-        return Response({"created": len(created_ids), "created_ids": created_ids, "errors": errors},
-                        status=status.HTTP_200_OK)
+
+        return Response(
+            {"created": len(created_ids), "created_ids": created_ids, "tasks": tasks, "errors": errors},
+            status=status.HTTP_200_OK
+        )
