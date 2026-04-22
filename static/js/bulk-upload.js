@@ -17,9 +17,9 @@ document.addEventListener('DOMContentLoaded', function () {
   // Config
   const MAX_FILE_SIZE = 12 * 1024 * 1024; // 12 MB
   const MAX_TOTAL_FILES = 150;
-  const BATCH_SIZE = 15;
-  const MAX_RETRIES = 3; // <-- retry attempts per file
-  const REQUEST_TIMEOUT_MS = 120000; // 120s
+  const BATCH_SIZE = 2;
+  const MAX_RETRIES = 1; // <-- retry attempts per file
+  const REQUEST_TIMEOUT_MS = 5*60*100; // 5 min
 
   // Internal state
   // files: array of { file: File, attempts: number }
