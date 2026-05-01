@@ -147,7 +147,7 @@ RESERVE_TTL_MINUTES = 60
 TELEGRAM_BOT_TOKEN = env_keys.get("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_NEW_ORDER_CHAT_ID = env_keys.get("TELEGRAM_NEW_ORDER_CHAT_ID", "")
 
-SITE_URL = env_keys.get("SITE_URL", "https://stylnashki.by")
+SITE_URL = env_keys.get("SITE_URL", "https://still-nashky.by")
 
 WEBPAY = {
     "MERCHANT_ID": env_keys.get("WEBPAY_MERCHANT_ID", ""),  # из Webpay

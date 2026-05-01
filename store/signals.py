@@ -17,7 +17,7 @@ def create_profile(sender, instance, created, **kwargs):
 @receiver(pre_delete, sender=Product)
 def product_image_delete(sender, instance, **kwargs):
     """
-    Удаление файлов и папок, перед удалением экземпляра объявления.
+    Удаление файлов и папок, перед удалением экземпляра товара.
     """
     image_folder = os.path.dirname(instance.image.path) if instance.image else None
     instance.image.delete(False)

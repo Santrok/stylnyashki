@@ -1,0 +1,106 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width">
+    <title>Подтверждение заказа #{{ order.order_number }}</title>
+    <style>
+      /* Некоторые почтовые клиенты игнорируют стили в head, поэтому основные стили также дублируются инлайн */
+      body { background-color: #f5f7fb; margin: 0; padding: 20px; font-family: Arial, Helvetica, sans-serif; -webkit-text-size-adjust: 100%; }
+      .email-container { max-width: 680px; margin: 0 auto; background: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 6px rgba(0,0,0,0.06); }
+      .header { background: linear-gradient(90deg,#3b82f6,#06b6d4); padding: 20px; color: #fff; text-align: left; }
+      .header h1 { margin: 0; font-size: 20px; font-weight: 600; }
+      .content { padding: 24px; color: #111827; }
+      .greeting { font-size: 16px; margin-bottom: 12px; }
+      .order-meta { margin: 12px 0; color: #6b7280; font-size: 13px; }
+      .items-table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+      .items-table th, .items-table td { padding: 10px 8px; text-align: left; border-bottom: 1px solid #e6edf3; font-size: 14px; }
+      .items-table th { background: #fbfdff; color:#374151; font-weight:600; }
+      .total-row td { font-weight: 700; font-size: 16px; }
+      .btn { display: inline-block; margin-top: 18px; padding: 12px 20px; background: #10b981; color: #fff; text-decoration: none; border-radius: 6px; }
+      .footer { padding: 18px; color:#6b7280; font-size:13px; background:#fbfdff; text-align:center; }
+      .small { font-size: 12px; color: #9ca3af; }
+      @media (max-width: 600px) {
+        .content { padding: 16px; }
+        .header h1 { font-size: 18px; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="email-container" role="article" aria-roledescription="email">
+      <div class="header" style="background: linear-gradient(90deg,#3b82f6,#06b6d4); padding:20px; color:#fff;">
+        <h1 style="margin:0; font-size:20px;">{{ site_name|default:"СтильНяшки" }}</h1>
+        <div style="margin-top:6px; font-size:13px; opacity:0.95;">Подтверждение заказа №{{ order.order_number }}</div>
+      </div>
+
+      <div class="content" style="padding:24px; color:#111827;">
+        <p class="greeting" style="margin:0 0 12px 0; font-size:16px;">
+          Здравствуйте{% if order.first_name %} {{ order.first_name }}{% endif %},
+        </p>
+
+        <p style="margin:0 0 12px 0; color:#6b7280;">
+          Спасибо — ваш заказ принят и скоро будет обработан. Ниже приведены детали заказа.
+        </p>
+
+        <div class="order-meta" style="margin:12px 0; color:#6b7280; font-size:13px;">
+          <div>Номер заказа: <strong>#{{ order.order_number }}</strong></div>
+          <div>Дата: <strong>{{ order.created_at|date:"d.m.Y H:i" }}</strong></div>
+        </div>
+
+        <table class="items-table" style="width:100%; border-collapse:collapse; margin-top:16px;">
+          <thead>
+            <tr>
+              <th style="padding:10px 8px; text-align:left;">Товар</th>
+              <th style="padding:10px 8px; text-align:left;">Кол-во</th>
+              <th style="padding:10px 8px; text-align:left;">Цена</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in order.items.all %}
+            <tr>
+              <td style="padding:10px 8px; vertical-align:top;">
+                <div style="font-weight:600; color:#111827;">{{ item.product_name }}</div>
+                {% if item.size %}
+                  <div style="color:#6b7280; font-size:12px; margin-top:4px;">Размер: {{ item.size }}</div>
+                {% endif %}
+              </td>
+              <td style="padding:10px 8px; vertical-align:middle;">{{ item.quantity }}</td>
+              <td style="padding:10px 8px; vertical-align:middle;">{{ item.price|floatformat:2 }} руб.</td>
+            </tr>
+            {% endfor %}
+            <tr class="total-row">
+              <td style="padding:12px 8px; border-top:1px solid #e6edf3;"></td>
+              <td style="padding:12px 8px; border-top:1px solid #e6edf3; font-weight:700;">Итого</td>
+              <td style="padding:12px 8px; border-top:1px solid #e6edf3; font-weight:700;">{{ order.total|floatformat:2 }} руб.</td>
+            </tr>
+          </tbody>
+        </table>
+
+        {% if public_url %}
+          <p style="margin-top:18px;">
+            <a href="{{ public_url }}" class="btn" style="display:inline-block;margin-top:18px;padding:12px 20px;background:#10b981;color:#fff;text-decoration:none;border-radius:6px;">
+              Посмотреть заказ
+            </a>
+          </p>
+        {% endif %}
+
+        {% if order.comment %}
+          <div style="margin-top:14px; padding:12px; background:#f8fafc; border-radius:6px; color:#374151;">
+            <strong>Комментарий к заказу:</strong>
+            <div style="margin-top:6px; color:#6b7280;">{{ order.comment }}</div>
+          </div>
+        {% endif %}
+
+        <p style="margin-top:18px; color:#6b7280;">
+          Если у вас возникли вопросы — ответьте на это письмо или свяжитесь с нами через Instagram: <a href='https://www.instagram.com/still_nashky/'>@still_nashky</a>".
+        </p>
+      </div>
+
+      <div class="footer" style="padding:18px; color:#6b7280; background:#fbfdff; text-align:center;">
+        <div class="small" style="font-size:12px; color:#9ca3af;">
+          © {{ site_name|default:"Магазин" }} • Все права защищены
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

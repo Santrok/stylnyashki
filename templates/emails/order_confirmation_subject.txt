@@ -1,0 +1,1 @@
+{{ site_name|default:"Магазин СтильНяшки" }} — подтверждение заказа №{{ order.order_number }}

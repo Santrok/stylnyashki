@@ -1,0 +1,16 @@
+Здравствуйте{% if order.first_name %} {{ order.first_name }}{% endif %},
+
+Спасибо! Ваш заказ №{{ order.order_number }} принят и обрабатывается.
+
+Детали заказа:
+{% for item in order.items.all %}
+- {{ item.product_name }}{% if item.size %} ({{ item.size }}){% endif %} — {{ item.quantity }} × {{ item.price|floatformat:2 }}
+{% endfor %}
+
+Итого: {{ order.total|floatformat:2 }} руб.
+
+
+Если у вас есть вопросы, ответьте на это письмо или свяжитесь с нами через сайт {{ site_name|default:"" }}.
+
+С уважением,
+Команда {{ site_name|default:"магазина" }}

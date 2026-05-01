@@ -47,6 +47,7 @@ from .serializers import (
 from .services.favorites import get_or_create_favorite
 from .services.payments import build_webpay_form_data
 from .services.merge import merge_cart_on_login, merge_favorites_on_login
+from .tasks import send_telegram_notification_task, send_order_confirmation_email_task
 from .utils import _build_pagination_pages
 from tools.telegram_notification import send_telegram_notification
 
@@ -446,10 +447,15 @@ def checkout_view(request):
                 order.recalc_totals(save=True)
 
                 try:
-                    transaction.on_commit(lambda: send_telegram_notification(order, request=request))
+                    transaction.on_commit(lambda: send_telegram_notification_task(order.id, include_admin_link=True))
                 except Exception:
                     # на всякий случай логируем; не мешаем оформлению заказа
                     logger.exception("Не удалось запланировать уведомление в Telegram для заказа. %s", order.pk)
+
+                try:
+                    transaction.on_commit(lambda: send_order_confirmation_email_task.delay(order.pk))
+                except Exception:
+                    logger.exception("Не удалось поставить задачу Email для заказа %s", order.pk)
 
                 # раскомментировать при подключении оплаты картой
                 # if cd.get("payment_method") == Order.PaymentMethod.CARD:
