@@ -70,13 +70,15 @@
                    {% if form.password.errors %}data-has-error='1'{% endif %}
                    required>
 
-            <button class="field__toggle"
-                    type="button"
-                    aria-label="Показать/скрыть пароль"
-                    data-action="toggle-password"
-                    data-target="#{{ form.password.id_for_label }}">
-              <i class="far fa-eye"></i>
-            </button>
+            <div class="field__toggle" aria-hidden="true">
+  <button class="field__toggle-btn"
+          type="button"
+          aria-label="Показать/скрыть пароль"
+          data-action="toggle-password"
+          data-target="#{{ form.password.id_for_label }}">
+    <i class="far fa-eye-slash"></i>
+  </button>
+</div>
 
             {% if form.password.errors %}
               <p class="field__error" data-field-error>
