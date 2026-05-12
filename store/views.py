@@ -452,10 +452,11 @@ def checkout_view(request):
                     # на всякий случай логируем; не мешаем оформлению заказа
                     logger.exception("Не удалось запланировать уведомление в Telegram для заказа. %s", order.pk)
 
-                try:
-                    transaction.on_commit(lambda: send_order_confirmation_email_task.delay(order.pk))
-                except Exception:
-                    logger.exception("Не удалось поставить задачу Email для заказа %s", order.pk)
+                if order.email:
+                    try:
+                        transaction.on_commit(lambda: send_order_confirmation_email_task.delay(order.pk))
+                    except Exception:
+                        logger.exception("Не удалось поставить задачу Email для заказа %s", order.pk)
 
                 # раскомментировать при подключении оплаты картой
                 # if cd.get("payment_method") == Order.PaymentMethod.CARD:

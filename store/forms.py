@@ -292,7 +292,7 @@ class CheckoutForm(forms.Form):
     middle_name = forms.CharField(max_length=150, required=True, label="Отчество")
     phone = forms.CharField(max_length=32, required=True, label="Телефон")
     instagram = forms.CharField(max_length=64, required=True, label="Instagram")
-    email = forms.EmailField(required=True, label="Email")
+    email = forms.EmailField(required=False, label="Email")
 
     # post
     postal_index = forms.CharField(max_length=16, required=False, label="Почтовый индекс")

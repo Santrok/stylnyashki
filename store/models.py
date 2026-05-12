@@ -361,7 +361,7 @@ class Order(models.Model):
         default="",
         help_text="Ник в Instagram для связи (например: username или @username).",
     )
-    email = models.EmailField("Email")
+    email = models.EmailField("Email", blank=True, null=True)
 
     # --- Доставка: Почта ---
     postal_index = models.CharField("Почтовый индекс", max_length=16, blank=True, default="")
