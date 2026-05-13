@@ -185,9 +185,10 @@ class ProductAdmin(admin.ModelAdmin):
     list_display = [
         'name',
         'thumbnail',
+        'status',
         'category',
         'sizes_list',
-        'status',
+
         # 'brand',
         'price',
         # 'discount',
