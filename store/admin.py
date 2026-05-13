@@ -569,4 +569,5 @@ class SiteConfigurationAdmin(admin.ModelAdmin):
 
 @admin.register(OrderItem)
 class OrderItemAdmin(admin.ModelAdmin):
-    fields = ('product', 'get_html_photo', 'product_name', 'size', 'price', 'line_total')
+
+    fields = ('product', 'product_name', 'size', 'price')
