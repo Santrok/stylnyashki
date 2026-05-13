@@ -565,7 +565,8 @@ class CompanyInfo(models.Model):
     phone = models.CharField("Телефон", max_length=64, blank=True, null=True)
     email = models.EmailField("Электронная почта", blank=True, null=True)
 
-    registration_note = models.TextField("Сведения о регистрации / режим работы", blank=True, null=True)
+    registration_note = models.TextField("Сведения о регистрации", blank=True, null=True)
+    worktime = models.TextField("Режим работы", blank=True, null=True)
 
     # optional: ordering or timestamps
     updated_at = models.DateTimeField("Обновлён", auto_now=True)

@@ -33,9 +33,17 @@
           {% if company_info and company_info.registration_note %}
             {{ company_info.registration_note }}
           {% else %}
-            Номер свидетельства о государственной регистрации №123456789 от 01.01.2020. Режим работы офиса: ежедневно с 9:00 до 21:00.
+            Номер свидетельства о государственной регистрации №123456789 от 01.01.2020.
           {% endif %}
         </div>
+          <div class="company-reg">
+          {% if company_info and company_info.worktime %}
+            Режим работы офиса: {{ company_info.worktime }}
+          {% else %}
+            Режим работы офиса: ежедневно с 9:00 до 21:00.
+          {% endif %}
+        </div>
+
       </div>
 
       <div class="footer-col footer-col--center">
