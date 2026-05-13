@@ -612,7 +612,7 @@ body.menu-open{ overflow:hidden; }
   overflow:hidden;
   display:flex;
   flex-direction:column;
-  height: 270px;
+  /*height: 270px;*/
 }
 .p-card:hover{
   box-shadow: 0 14px 26px rgba(0,0,0,0.12);
@@ -659,7 +659,7 @@ body.menu-open{ overflow:hidden; }
 .p-card__fav:hover{ color: var(--red); }
 
 .p-card__img{
-  height: 160px;
+  /*height: 160px;*/
   background:#f3f4f6;
   overflow:hidden;
   display:flex;

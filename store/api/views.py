@@ -196,7 +196,7 @@ class CartToggleAPIView(APIView):
             item.delete()
             in_cart = False
         else:
-            CartItem.objects.create(cart=cart, product=product, size=None, quantity=1)
+            CartItem.objects.create(cart=cart, product=product, size=product.sizes.first(), quantity=1)
             in_cart = True
 
         return Response({
