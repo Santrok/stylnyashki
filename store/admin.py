@@ -566,3 +566,7 @@ class SiteConfigurationAdmin(admin.ModelAdmin):
         """При сохранении сбрасываем кэш конфигурации."""
         super().save_model(request, obj, form, change)
         cache.delete("site_config_singleton")
+
+@admin.register(OrderItem)
+class OrderItemAdmin(admin.ModelAdmin):
+    fields = ('product', 'get_html_photo', 'product_name', 'size', 'price', 'line_total')
