@@ -571,3 +571,4 @@ class SiteConfigurationAdmin(admin.ModelAdmin):
 class OrderItemAdmin(admin.ModelAdmin):
 
     fields = ('product', 'product_name', 'size', 'price')
+    list_display = ("id", 'size')
