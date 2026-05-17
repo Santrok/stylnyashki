@@ -212,7 +212,7 @@ class ProductAdmin(admin.ModelAdmin):
     filter_horizontal = ['sizes']
     date_hierarchy = 'created_at'
     list_select_related = ('category',)
-    list_per_page = 50
+    list_per_page = 10
 
     # readonly (computed) fields in change form
     readonly_fields = ('created_at', 'discounted_price_display', 'thumbnail')
