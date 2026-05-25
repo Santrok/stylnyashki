@@ -135,9 +135,11 @@ def catalog(request):
 
     root_categories = Category.objects.filter(type="level_1").order_by("tree_id", "lft")
 
-    price_stats = qs.aggregate(pmin=Min("price"), pmax=Max("price"))
-    price_min = price_stats["pmin"]
-    price_max = price_stats["pmax"]
+    # price_stats = qs.aggregate(pmin=Min("price"), pmax=Max("price"))
+    # price_min = price_stats["pmin"]
+    # price_max = price_stats["pmax"]
+    price_min = 7
+    price_max = 12
 
     sizes = list(SizeOption.objects.all().order_by("sort", "value"))
 
