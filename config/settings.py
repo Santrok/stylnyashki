@@ -28,6 +28,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.sites',
+    'django.contrib.sitemaps',
     'rest_framework',
     'mptt',
     'store',
@@ -237,13 +239,12 @@ LOGGING = {
         },
         # Включи логгер для приложения store (или вашего приложения)
         "store": {
-            "handlers": [ "file", "error_file"],
+            "handlers": ["file", "error_file"],
             "level": LOG_LEVEL,
             "propagate": False,
         },
     },
 }
-
 
 CELERY_BROKER_URL = env_keys.get("CELERY_BROKER_URL", "redis://127.0.0.1:6379/0")
 CELERY_RESULT_BACKEND = env_keys.get("CELERY_RESULT_BACKEND", "redis://127.0.0.1:6379/1")

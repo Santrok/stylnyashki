@@ -1,0 +1,30 @@
+User-agent: *
+Disallow: /admin/
+Disallow: /accounts/
+Disallow: /account/
+Disallow: /login
+Disallow: /logout
+Disallow: /cart
+Disallow: /basket
+Disallow: /checkout
+Disallow: /orders
+Disallow: /order/
+Disallow: /search
+Disallow: /*?*sort=
+Disallow: /*?*filter=
+Disallow: /*?*price=
+
+Disallow: /cgi-bin/
+Disallow: /tmp/
+Disallow: /tests/
+
+
+Allow: /static/
+Allow: /media/
+
+
+User-agent: Googlebot-Image
+Allow: /media/
+Allow: /uploads/
+
+Sitemap: https://still-nashky.by/sitemap.xml
