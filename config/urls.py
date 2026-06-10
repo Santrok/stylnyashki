@@ -7,11 +7,10 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.views.decorators.cache import cache_page
 
-from store.sitemaps import StaticViewSitemap, CategorySitemap
+from store.sitemaps import StaticViewSitemap
 
 sitemaps = {
     'static': StaticViewSitemap(),
-    'categories': CategorySitemap(),
 }
 
 urlpatterns = [

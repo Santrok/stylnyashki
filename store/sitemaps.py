@@ -15,17 +15,3 @@ class StaticViewSitemap(Sitemap):
         return reverse(item)
 
 
-class CategorySitemap(Sitemap):
-    changefreq = "weekly"
-    priority = 0.7
-
-    def items(self):
-        return Category.objects.all()
-
-    def location(self, obj):
-        # Если в модели реализован get_absolute_url — используем его
-        if hasattr(obj, 'get_absolute_url') and callable(obj.get_absolute_url):
-            return obj.get_absolute_url()
-        # Иначе предполагаем, что у вас есть url name 'category_detail' принимающий slug
-        return reverse('category_detail', args=[obj.slug])
-
