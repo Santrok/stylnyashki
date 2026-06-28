@@ -259,6 +259,16 @@
         if (data.in_cart) state.cart.add(String(pid));
         else state.cart.delete(String(pid));
 
+        // ОТСЛЕЖИВАНИЕ МЕТРИКИ
+    if (data.action && data.product) {
+      if (data.action === 'add') {
+        trackAddToCart(data.product);
+      } else if (data.action === 'remove') {
+        trackRemoveFromCart(data.product);
+      }
+    }
+    //  КОНЕЦ ОТСЛЕЖИВАНИЯ
+
         // update basic button active state
         document.querySelectorAll(`[data-action="toggle-cart"][data-product-id="${pid}"]`)
           .forEach((btn) => {

@@ -23,6 +23,22 @@
           Мы свяжемся с вами в Instagram: <strong>@{{ order.instagram }}</strong> для подтверждения.
         </p>
 
+         <!-- DATA ATTRIBUTE ДЛЯ METRICA -->
+            <div data-order-tracking
+                 data-order-id="{{ order.order_number }}"
+                 data-order-total="{{ order.total }}"
+                 style="display: none;"></div>
+
+            <!-- ТОВАРЫ В ЗАКАЗЕ ДЛЯ METRICA -->
+            {% for item in order.items.all %}
+            <div data-order-item
+                 data-product-id="{{ item.product.id }}"
+                 data-product-name="{{ item.product_name }}"
+                 data-product-price="{{ item.price }}"
+                 data-quantity="{{ item.quantity }}"
+                 style="display: none;"></div>
+            {% endfor %}
+
         <div class="success-actions">
   <a class="success-btn success-btn--primary" href="{% url 'home' %}">
     <i class="fas fa-home" aria-hidden="true"></i>

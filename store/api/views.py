@@ -228,6 +228,7 @@ class CartToggleAPIView(APIView):
         if item:
             item.delete()
             in_cart = False
+            action = 'remove'
         else:
             CartItem.objects.get_or_create(
                 cart=cart,
@@ -236,10 +237,21 @@ class CartToggleAPIView(APIView):
                 defaults={'quantity': 1}
             )
             in_cart = True
+            action = 'add'
+
+        product_data = {
+            "id": product.id,
+            "name": product.name,
+            "price": float(product.price),
+            "quantity": 1,
+            "variant": f"{size.name if size else 'Default'}"
+        }
 
         return Response({
             "ok": True,
             "in_cart": in_cart,
+            "action": action,
+            "product": product_data,
             "summary": cart_summary(cart),
         }, status=status.HTTP_200_OK)
 
