@@ -181,22 +181,60 @@ class UserStateAPIView(APIView):
         })
 
 
+# class CartToggleAPIView(APIView):
+#     """
+#     POST: product_id
+#     Переключатель: если товар (без размера) в корзине — удаляет, иначе — добавляет (qty=1).
+#     """
+#     def post(self, request):
+#         cart = get_or_create_cart(request)
+#         product_id = request.data.get("product_id")
+#         product = get_object_or_404(Product, id=product_id, is_active=True)
+#
+#         item = CartItem.objects.filter(cart=cart, product=product, size__isnull=True).first()
+#         if item:
+#             item.delete()
+#             in_cart = False
+#         else:
+#             CartItem.objects.create(cart=cart, product=product, size=product.sizes.first(), quantity=1)
+#             in_cart = True
+#
+#         return Response({
+#             "ok": True,
+#             "in_cart": in_cart,
+#             "summary": cart_summary(cart),
+#         }, status=status.HTTP_200_OK)
+
+
 class CartToggleAPIView(APIView):
     """
     POST: product_id
-    Переключатель: если товар (без размера) в корзине — удаляет, иначе — добавляет (qty=1).
+    Переключатель: если товар в корзине — удаляет, иначе — добавляет (qty=1).
     """
     def post(self, request):
         cart = get_or_create_cart(request)
         product_id = request.data.get("product_id")
         product = get_object_or_404(Product, id=product_id, is_active=True)
 
-        item = CartItem.objects.filter(cart=cart, product=product, size__isnull=True).first()
+        # Определяем размер (первый доступный размер товара)
+        size = product.sizes.first()
+
+        item = CartItem.objects.filter(
+            cart=cart,
+            product=product,
+            size=size
+        ).first()
+
         if item:
             item.delete()
             in_cart = False
         else:
-            CartItem.objects.create(cart=cart, product=product, size=product.sizes.first(), quantity=1)
+            CartItem.objects.get_or_create(
+                cart=cart,
+                product=product,
+                size=size,
+                defaults={'quantity': 1}
+            )
             in_cart = True
 
         return Response({
