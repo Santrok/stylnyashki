@@ -244,7 +244,7 @@ class CartToggleAPIView(APIView):
             "name": product.name,
             "price": float(product.price),
             "quantity": 1,
-            "variant": f"{size.name if size else 'Default'}"
+            "variant": f"{size.value if size else 'Default'}"
         }
 
         return Response({
