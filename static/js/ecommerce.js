@@ -26,7 +26,7 @@ function trackEcommerce(actionType, products, actionField = {}) {
     };
 
     window.dataLayer.push(ecommerceData);
-    console.log('Tracked ecommerce event:', actionType, ecommerceData);
+
 }
 
 /**
@@ -336,4 +336,4 @@ async function checkoutWithTracking(orderData, onSuccess = null) {
     }
 }
 
-console.log('✓ eCommerce tracking script loaded');
+

@@ -39,7 +39,7 @@ document.addEventListener('DOMContentLoaded', function () {
               badge.className = 'order-badge ' + newStatus.toUpperCase();
             }
           }
-          console.log('Status updated', data);
+
         }
       } catch (err) {
         alert('Network error: ' + err.message);
