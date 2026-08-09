@@ -19,7 +19,7 @@ SECRET_KEY = env_keys.get('SECRET_KEY', 'django-insecure-dev-key-change-in-produ
 
 DEBUG = env_keys.get('DEBUG', 'True') == 'True'
 
-ALLOWED_HOSTS = env_keys.get('ALLOWED_HOSTS', 'localhost 127.0.0.1').split()
+ALLOWED_HOSTS = env_keys.get('ALLOWED_HOSTS', 'localhost').split()
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -37,15 +37,31 @@ INSTALLED_APPS = [
 
 SITE_ID = 1
 
-SECURE_SSL_REDIRECT = True
-SESSION_COOKIE_SECURE = True
-CSRF_COOKIE_SECURE = True
-SECURE_PROXY_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+SECURE_SSL_REDIRECT = False
+# SESSION_COOKIE_SECURE = True
+# CSRF_COOKIE_SECURE = True
+# SECURE_PROXY_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
-CSRF_TRUSTED_ORIGINS = [
-    'https://still-nashky.by/',
-    'https://www.still-nashky.by/',
-]
+# CSRF_TRUSTED_ORIGINS = [
+#     'https://still-nashky.by/',
+#     'https://www.still-nashky.by/',
+# ]
+
+CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_HEADERS = (
+    "accept",
+    "authorization",
+    "content-type",
+    "content-length",
+    "user-agent",
+    "x-csrftoken",
+    "x-requested-with",
+    "x-api-version",
+    "content-signature",
+    "accept-encoding",
+    "begateway-request-id"
+)
+
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -55,7 +71,8 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    "config.middleware.request_id.RequestIDMiddleware"
+    "config.middleware.request_id.RequestIDMiddleware",
+    'store.middleware.CustomAuthorizationMiddleware'
 ]
 
 ROOT_URLCONF = 'config.urls'
@@ -163,14 +180,18 @@ TELEGRAM_NEW_ORDER_CHAT_ID = env_keys.get("TELEGRAM_NEW_ORDER_CHAT_ID", "")
 
 SITE_URL = env_keys.get("SITE_URL", "https://still-nashky.by")
 
-WEBPAY = {
-    "MERCHANT_ID": env_keys.get("WEBPAY_MERCHANT_ID", ""),  # из Webpay
-    "SECRET_KEY": env_keys.get("WEBPAY_SECRET_KEY", "1"),  # секретный ключ
-    "PAYMENT_URL": env_keys.get("WEBPAY_PAYMENT_URL", "https://pay.webpay.by/checkout"),  # пример
-    "API_URL": env_keys.get("WEBPAY_API_URL", "https://api.webpay.by"),  # если нужен
-    "RETURN_URL": SITE_URL + "/payments/return/",
-    "CALLBACK_URL": SITE_URL + "/payments/webhook/",
-    "CURRENCY": "BYN",
+BEPAID = {
+    "SHOP_ID": env_keys.get("BEPAID_SHOP_ID", ""),
+    "SHOP_SECRET": env_keys.get("BEPAID_SHOP_SECRET", ""),
+    "API_URL": env_keys.get("BEPAID_API_URL", "https://checkout.bepaid.by/ctp/api"),
+    "PUBLIC_KEY": env_keys.get("BEPAID_PUBLIC_KEY", ""),
+    "TEST_MODE": env_keys.get("BEPAID_TEST_MODE", 'True') == 'True',
+    "CURRENCY": env_keys.get("BEPAID_CURRENCY", "BYN"),
+    "NOTIFICATION_URL": env_keys.get("BEPAID_NOTIFICATION_URL", ""),
+    "SUCCESS_URL": env_keys.get("BEPAID_SUCCESS_URL", ""),
+    "DECLINE_URL": env_keys.get("BEPAID_DECLINE_URL", ""),
+    "FAIL_URL": env_keys.get("BEPAID_FAIL_URL", ""),
+    "CANCEL_URL": env_keys.get("BEPAID_CANCEL_URL", ""),
 }
 
 LOG_DIR = env_keys.get("LOG_DIR", os.path.join(BASE_DIR, "logs"))

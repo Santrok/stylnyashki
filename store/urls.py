@@ -10,7 +10,9 @@ from .views import ProductViewSet, CartViewSet, home, catalog, cart_page, checko
     checkout_unavailable_view, login_view, register_view, logout_view, account_addresses_view, account_view, \
     account_orders_view, account_order_detail_view, account_favorites_view, favorite_remove_view, \
     favorite_add_to_cart_view, products_bulk_upload_view, AccountStaffOrdersListView, AccountStaffOrderDetailView, \
-    account_order_status_update, cart_add, cart_remove, payment_create_view, webpay_webhook, payment_return
+    account_order_status_update, cart_add, cart_remove, \
+    payment_create, payment_success, payment_decline, payment_fail, payment_cancel, payment_retry, payment_status_check, \
+    webhook_bepaid
 
 router = DefaultRouter()
 router.register('products', ProductViewSet, basename='product')
@@ -59,6 +61,15 @@ urlpatterns = [
 #     path('payments/create/<int:payment_id>/', payment_create_view, name='payment_create'),
 #     path('payments/webhook/', webpay_webhook, name='payments_webhook'),
 #     path('payments/return/', payment_return, name='payments_return'),
+
+path("payments/create/<int:payment_id>/", payment_create, name="payment_create"),
+    path("payments/success/", payment_success, name="payment_success"),
+    path("payments/decline/", payment_decline, name="payment_decline"),
+    path("payments/fail/", payment_fail, name="payment_fail"),
+    path("payments/cancel/", payment_cancel, name="payment_cancel"),
+    path("payments/retry/<uuid:order_id>/", payment_retry, name="payment_retry"),
+    path("payments/status/<int:payment_id>/", payment_status_check, name="payment_status"),
+    path("payments/notification/", webhook_bepaid, name="payment_notification"),
 
     path('password-reset/', auth_views.PasswordResetView.as_view(
         template_name='store/password_reset_form.html',

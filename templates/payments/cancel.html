@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Стильняшки - Платёж отменён{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'css/payment_result.css' %}">
+{% endblock %}
+
+{% block content %}
+<main class="payment-result payment-result--warning">
+  <div class="container">
+    <div class="payment-result-center">
+      <section class="payment-result-card" aria-label="Платёж отменён">
+        <div class="payment-result-icon payment-result-icon--warning" aria-hidden="true">
+          <i class="fas fa-ban"></i>
+        </div>
+
+        <h1 class="payment-result-title brand-font">Платёж отменён</h1>
+
+        <p class="payment-result-text">
+          Вы отменили платёж на странице оплаты.
+          <br>
+          <strong>Заказ не подтвержден.</strong>
+        </p>
+
+        <div class="payment-result-info">
+          <p>
+            Товары в вашем заказе зарезервированы на 60 минут.
+          </p>
+          <p>
+            Если вы желаете завершить покупку, пожалуйста, попробуйте оплатить снова в течение этого времени.
+          </p>
+        </div>
+
+        <div class="payment-result-actions">
+          <a class="payment-result-btn payment-result-btn--primary" href="{% url 'payment_retry' order.public_id %}">
+            <i class="fas fa-credit-card" aria-hidden="true"></i>
+            <span>Оплатить заказ</span>
+          </a>
+
+          <a class="payment-result-btn payment-result-btn--ghost" href="{% url 'home' %}">
+            <i class="fas fa-home" aria-hidden="true"></i>
+            <span>На главную</span>
+          </a>
+        </div>
+
+        <p class="payment-result-note payment-result-note--error">
+          <i class="fas fa-clock" aria-hidden="true"></i>
+          Номер заказа: <strong>#{{ order.order_number }}</strong>
+        </p>
+      </section>
+    </div>
+  </div>
+</main>
+{% endblock %}
