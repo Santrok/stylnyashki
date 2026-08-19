@@ -6,6 +6,9 @@ import base64
 import hashlib
 import json
 import logging
+from datetime import timedelta
+from django.utils.timezone import now, make_aware
+from pytz import UTC
 from decimal import Decimal
 from typing import Optional, Dict, Any
 
@@ -60,6 +63,7 @@ class BepaidClient:
         self.decline_url = bepaid_config.get("DECLINE_URL", "")
         self.fail_url = bepaid_config.get("FAIL_URL", "")
         self.cancel_url = bepaid_config.get("CANCEL_URL", "")
+        self.payment_timeout_minutes = bepaid_config.get("PAYMENT_TIMEOUT_MINUTES", 60)
 
         # Валидация обязательных параметров
         if not self.shop_id or not self.shop_secret:
@@ -159,6 +163,18 @@ class BepaidClient:
             logger.error(f"Bepaid request error ({method} {endpoint}): {e}")
             raise BepaidApiError(f"Request failed: {str(e)}")
 
+    def _format_datetime_iso8601(self, dt) -> str:
+        """
+        Форматирует datetime в ISO 8601 формат для bepaid.
+
+        Формат: YYYY-MM-DDThh:mm:ssTZD
+        Например: 2025-01-15T14:30:00+00:00
+        """
+        if dt.tzinfo is None:
+            # Если timezone-naive, используем UTC
+            dt = make_aware(dt, UTC)
+        return dt.isoformat()
+
     def create_payment(
             self,
             order_id: str,
@@ -168,6 +184,7 @@ class BepaidClient:
             customer_first_name: Optional[str] = None,
             customer_last_name: Optional[str] = None,
             customer_phone: Optional[str] = None,
+            timeout_minutes: Optional[int] = None,
     ) -> Dict[str, Any]:
         """
         Создаёт платёж (токен) в bepaid для оплаты картой.
@@ -180,6 +197,7 @@ class BepaidClient:
             customer_first_name: Имя покупателя
             customer_last_name: Фамилия покупателя
             customer_phone: Телефон покупателя
+            timeout_minutes: Дата и время, до которого должна быть сделана оплата (по умолчанию 60)
 
         Returns:
             Dict с полями:
@@ -197,6 +215,14 @@ class BepaidClient:
             raise BepaidException("Сумма должна быть больше 0")
         if not description:
             raise BepaidException("Требуется описание")
+
+        # Используем переданный timeout или из конфига
+        if timeout_minutes is None:
+            timeout_minutes = self.payment_timeout_minutes
+
+            # Вычисляем время истечения платежа
+        expired_at = now() + timedelta(minutes=timeout_minutes)
+        expired_at_iso = self._format_datetime_iso8601(expired_at)
 
         # Преобразуем сумму в копейки (целые числа)
         amount_cents = int(amount * 100)
@@ -226,6 +252,7 @@ class BepaidClient:
                     "amount": amount_cents,
                     "description": description,
                     "tracking_id": order_id,
+                    "expired_at": expired_at_iso
                 },
                 "customer": {
                     "email": customer_email,
@@ -441,6 +468,23 @@ class BepaidClient:
         }
 
         return status_map.get(bepaid_status, "failed")
+
+    def get_payment_redirect_url(self, token: str) -> str:
+        """
+        Возвращает URL для редиректа на форму оплаты по токену.
+        Используется когда пользователь хочет вернуться к оплате.
+
+        Args:
+            token: Токен платежа (gateway_payment_id)
+
+        Returns:
+            URL для редиректа
+        """
+        if not token:
+            raise BepaidException("token is required")
+
+        # Базовый URL bepaid + токен
+        return f"https://checkout.bepaid.by/widget/hpp.html?token={token}"
 
 
 # Инстанс клиента для использования в других модулях

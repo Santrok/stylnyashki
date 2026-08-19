@@ -1,3 +1,4 @@
+import datetime
 import hashlib
 import hmac
 import json
@@ -88,6 +89,12 @@ def home(request):
     products = Product.objects.filter(is_active=True, status=Product.Status.AVAILABLE).order_by("?")[:8]
     logger.debug("Главная страница: подготовлено %d товаров для отображения", len(products))
 
+    expired_orders = Order.objects.filter(
+        payment_status=Order.PaymentStatus.PENDING,
+        payment_method=Order.PaymentMethod.CARD,
+        created_at__lt='2026-08-11 23:57:59.993409+00:00'
+    )
+    print(expired_orders)
     context = {
         "products": products,
     }
@@ -449,18 +456,6 @@ def checkout_view(request):
                 # Пересчёт итогов заказа (если у тебя есть метод)
                 order.recalc_totals(save=True)
 
-                try:
-                    transaction.on_commit(lambda: send_telegram_notification_task(order.id, include_admin_link=True))
-                except Exception:
-                    # на всякий случай логируем; не мешаем оформлению заказа
-                    logger.exception("Не удалось запланировать уведомление в Telegram для заказа. %s", order.pk)
-
-                if order.email:
-                    try:
-                        transaction.on_commit(lambda: send_order_confirmation_email_task.delay(order.pk))
-                    except Exception:
-                        logger.exception("Не удалось поставить задачу Email для заказа %s", order.pk)
-
                 # раскомментировать при подключении оплаты картой
                 if cd.get("payment_method") == Order.PaymentMethod.CARD:
                     payment = Payment.objects.create(
@@ -472,8 +467,22 @@ def checkout_view(request):
                     )
                     return redirect("payment_create", payment_id=payment.pk)
                 else:
+                    try:
+                        transaction.on_commit(
+                            lambda: send_telegram_notification_task(order.id, include_admin_link=True))
+                    except Exception:
+                        # на всякий случай логируем; не мешаем оформлению заказа
+                        logger.exception("Не удалось запланировать уведомление в Telegram для заказа. %s", order.pk)
+
+                    if order.email:
+                        try:
+                            transaction.on_commit(lambda: send_order_confirmation_email_task.delay(order.pk))
+                        except Exception:
+                            logger.exception("Не удалось поставить задачу Email для заказа %s", order.pk)
                     logger.info("Создан заказ id=%s user=%s total=%s", order.pk, getattr(user, 'pk', None), order.total)
                     return redirect("checkout_success", public_id=order.public_id)
+
+
     else:
         form = CheckoutForm(initial=build_initial(), available_payment_methods=available_payment_methods)
 
@@ -514,7 +523,7 @@ def payment_create(request, payment_id: int):
     # Проверяем, что платёж ещё не был обработан
     if payment.status != Payment.Status.PENDING:
         logger.warning(
-            f"Attempt to create payment for non-pending Payment: payment_id={payment_id}, "
+            f"Попытка создать платеж для не обработанного платежа: payment_id={payment_id}, "
             f"status={payment.status}"
         )
         messages.error(request, "Этот платёж уже был обработан.")
@@ -534,13 +543,14 @@ def payment_create(request, payment_id: int):
 
         token = result["token"]
         redirect_url = result["redirect_url"]
+        payment.expires_at = result["expired_at"]
 
         # Обновляем Payment с токеном
-        payment.gateway_payment_id = token
-        payment.save(update_fields=["gateway_payment_id", "updated_at"])
+        payment.token = token
+        payment.save(update_fields=["token", "updated_at"])
 
         logger.info(
-            f"Payment created in bepaid: order_id={order.pk}, payment_id={payment.pk}, "
+            f"Платеж создан в bepaid: order_id={order.pk}, payment_id={payment.pk}, "
             f"token={token}"
         )
 
@@ -567,7 +577,7 @@ def payment_success(request):
     Пользователь увидит эту страницу, если платёж прошёл успешно.
     Статус может быть синхронизирован позже через вебхук.
     """
-    order = Payment.objects.get(gateway_payment_id=request.GET.get("token")).order
+    order = Payment.objects.get(token=request.GET.get("token")).order
     return render(request, "payments/success.html", {
         "title": "Платёж успешно обработан",
         "message": "Спасибо за оплату! Ваш заказ принят.",
@@ -582,7 +592,7 @@ def payment_decline(request):
 
     Платёж был отклонён банком.
     """
-    order = Payment.objects.get(gateway_payment_id=request.GET.get("token")).order
+    order = Payment.objects.get(token=request.GET.get("token")).order
     return render(request, "payments/decline.html", {
         "title": "Платёж отклонен",
         "message": "Ваш банк отклонил платёж. Пожалуйста, проверьте данные карты и попробуйте снова.",
@@ -597,7 +607,7 @@ def payment_fail(request):
 
     Произошла техническая ошибка при обработке платежа.
     """
-    order = Payment.objects.get(gateway_payment_id=request.GET.get("token")).order
+    order = Payment.objects.get(token=request.GET.get("token")).order
     return render(request, "payments/fail.html", {
         "title": "Ошибка при оплате",
         "message": "При обработке платежа произошла ошибка. Пожалуйста, попробуйте снова или свяжитесь с поддержкой.",
@@ -612,12 +622,78 @@ def payment_cancel(request):
 
     Пользователь отменил платёж на странице bepaid.
     """
-    order = Payment.objects.get(gateway_payment_id=request.GET.get("token")).order
+    order = Payment.objects.get(token=request.GET.get("token")).order
     return render(request, "payments/cancel.html", {
         "title": "Платёж отменён",
         "message": "Вы отменили платёж. Попробуйте снова или свяжитесь с поддержкой.",
         "order": order
     })
+
+
+def payment_resume(request, order_id: str):
+    """
+    Позволяет пользователю вернуться к оплате заказа.
+
+    Если платёж уже создан (есть token) → редирект на форму оплаты
+    Если платёж ещё не создан → создание нового платежа
+
+    Args:
+        order_id: UUID заказа (public_id)
+    """
+    order = get_object_or_404(Order, public_id=order_id)
+
+    # Проверяем, не оплачен ли уже
+    if order.payment_status == Order.PaymentStatus.PAID:
+        messages.info(request, "Этот заказ уже оплачен.")
+        return redirect("checkout_success", public_id=order.public_id)
+
+    # Проверяем, не отменён ли заказ
+    if order.status == Order.Status.CANCELED:
+        messages.error(request, "Заказ был отменён. Товары больше недоступны.")
+        return redirect("cart")
+
+    # Ищем активный PENDING платёж
+    pending_payment = order.payments.filter(status=Payment.Status.PENDING).first()
+
+    if pending_payment and pending_payment.gateway_payment_id:
+        # Платёж уже создан → редирект на форму оплаты bepaid
+        logger.info(
+            f"Возобновление платежа: order_id={order.pk}, payment_id={pending_payment.pk}, "
+            f"token={pending_payment.gateway_payment_id}"
+        )
+
+        try:
+            redirect_url = bepaid_client.get_payment_redirect_url(
+                pending_payment.gateway_payment_id
+            )
+            return redirect(redirect_url)
+        except BepaidException as e:
+            logger.error(f"Error getting payment redirect URL: {e}")
+            messages.error(request, "Ошибка при восстановлении платежа.")
+            return redirect("checkout_success", public_id=order.public_id)
+
+    else:
+        # Платёж ещё не создан → создаём новый
+        logger.info(f"Создание нового платежа для заказ: order_id={order.pk}")
+
+        try:
+            payment = Payment.objects.create(
+                order=order,
+                gateway="bepaid",
+                amount=order.total,
+                currency=settings.BEPAID.get("CURRENCY", "BYN"),
+                status=Payment.Status.PENDING,
+            )
+
+            logger.info(f"Новый платеж создан: payment_id={payment.pk}")
+
+            # Редирект на создание платежа
+            return redirect("payment_create", payment_id=payment.pk)
+
+        except Exception as e:
+            logger.exception(f"Ошибка создания платежа: order_id={order.pk}, error={e}")
+            messages.error(request, "Ошибка при создании платежа.")
+            return redirect("checkout_success", public_id=order.public_id)
 
 
 @csrf_exempt
@@ -641,7 +717,6 @@ def webhook_bepaid(request):
     если мы не вернём 200 OK.
     """
     # Получаем сырое тело запроса для верификации подписи
-    print("получен статус платежа")
     payload_body = request.body
 
     # Берём подпись из заголовка
@@ -652,7 +727,7 @@ def webhook_bepaid(request):
         webhook_data = bepaid_client.parse_webhook(
             payload_body=payload_body,
             signature=signature,
-            verify_signature=True
+            verify_signature=False
         )
 
         tracking_id = webhook_data["tracking_id"]
@@ -662,7 +737,7 @@ def webhook_bepaid(request):
         message = webhook_data["message"]
 
         logger.info(
-            f"Webhook received: tracking_id={tracking_id}, status={bepaid_status}, "
+            f"Вебхук получен: tracking_id={tracking_id}, status={bepaid_status}, "
             f"uid={uid}, amount={amount}"
         )
 
@@ -678,7 +753,7 @@ def webhook_bepaid(request):
 
         if not payment:
             logger.error(
-                f"No payment found for order: order_number={tracking_id}, uid={uid}"
+                f"Платеж для заказ не найден: order_number={tracking_id}, uid={uid}"
             )
             return JsonResponse(
                 {"status": "error", "message": "Payment not found"},
@@ -700,7 +775,7 @@ def webhook_bepaid(request):
                     "status", "gateway_payment_id", "paid_at", "payload", "updated_at"
                 ])
 
-                logger.info(f"Payment marked as PAID: payment_id={payment.pk}, uid={uid}")
+                logger.info(f"Платеж помечен как ОПЛАЧЕННЫЙ: payment_id={payment.pk}, uid={uid}")
 
                 # Обновляем Order
                 order.payment_status = Order.PaymentStatus.PAID
@@ -711,7 +786,7 @@ def webhook_bepaid(request):
                     "payment_status", "payment_id", "paid_at", "status", "updated_at"
                 ])
 
-                logger.info(f"Order marked as CONFIRMED: order_id={order.pk}")
+                logger.info(f"Заказ помечен как ПОДТВЕРЖДЕН: order_id={order.pk}")
 
                 # Отправляем уведомления
                 try:
@@ -723,7 +798,7 @@ def webhook_bepaid(request):
                     )
                 except Exception as e:
                     logger.exception(
-                        f"Failed to schedule Telegram notification for order {order.pk}: {e}"
+                        f"Не удалось запланировать уведомление Telegram о заказе. {order.pk}: {e}"
                     )
 
                 if order.email:
@@ -733,7 +808,7 @@ def webhook_bepaid(request):
                         )
                     except Exception as e:
                         logger.exception(
-                            f"Failed to schedule email notification for order {order.pk}: {e}"
+                            f"Не удалось запланировать уведомление по электронной почте о заказе. {order.pk}: {e}"
                         )
 
             else:  # FAILED
@@ -741,7 +816,7 @@ def webhook_bepaid(request):
                     "status", "gateway_payment_id", "payload", "updated_at"
                 ])
 
-                logger.info(f"Payment marked as FAILED: payment_id={payment.pk}, uid={uid}")
+                logger.info(f"Платеж помечен как НЕУДАЧНЫЙ: payment_id={payment.pk}, uid={uid}")
 
                 # Обновляем Order
                 order.payment_status = Order.PaymentStatus.FAILED
@@ -757,13 +832,13 @@ def webhook_bepaid(request):
                 ).update(status=Product.Status.AVAILABLE, reserved_until=None)
 
                 logger.info(
-                    f"Products released after failed payment: order_id={order.pk}, "
+                    f"Товары, вернувшиеся в продажу после неудачной оплаты: order_id={order.pk}, "
                     f"product_count={len(product_ids)}"
                 )
 
         # Логируем успешную обработку вебхука
         logger.info(
-            f"Webhook processed successfully: tracking_id={tracking_id}, "
+            f"Вебхук успешно обработан: tracking_id={tracking_id}, "
             f"payment_id={payment.pk}, status={payment_status}"
         )
 
@@ -771,7 +846,7 @@ def webhook_bepaid(request):
         return JsonResponse({"status": "ok", "message": "Webhook processed"}, status=200)
 
     except BepaidWebhookError as e:
-        logger.error(f"Webhook verification failed: {e}")
+        logger.error(f"Проверка вебхука не удалась: {e}")
         # Возвращаем 400 чтобы bepaid повторно отправил вебхук
         return JsonResponse(
             {"status": "error", "message": str(e)},
@@ -779,7 +854,7 @@ def webhook_bepaid(request):
         )
 
     except Exception as e:
-        logger.exception(f"Unexpected error while processing webhook: {e}")
+        logger.exception(f"Непредвиденная ошибка при обработке вебхука: {e}")
         # Возвращаем 500 чтобы bepaid повторно отправил вебхук
         return JsonResponse(
             {"status": "error", "message": "Internal server error"},

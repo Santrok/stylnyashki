@@ -307,19 +307,6 @@
       {% endif %}
     </label>
 
-    <label class="co-payment-btn {% if not pm.erip %}is-disabled{% endif %}" title="{% if not pm.erip %}Временно недоступно{% endif %}">
-      <input type="radio" data-payment-radio name="{{ form.payment_method.html_name }}" value="erip"
-             {% if form.payment_method.value == "erip" %}checked{% endif %}
-             {% if not pm.erip %}disabled{% endif %}>
-      <span class="co-payment-btn__content">
-        <i class="fas fa-receipt" aria-hidden="true"></i>
-        <span>АИС "Расчёт" (ЕРИП)</span>
-      </span>
-      {% if not pm.erip %}
-        <span class="co-payment-badge">Временно недоступно</span>
-      {% endif %}
-    </label>
-
     <label class="co-payment-btn {% if not pm.card %}is-disabled{% endif %}" title="{% if not pm.card %}Временно недоступно{% endif %}">
       <input type="radio" data-payment-radio name="{{ form.payment_method.html_name }}" value="card"
              {% if form.payment_method.value == "card" %}checked{% endif %}
@@ -340,12 +327,6 @@
                                 <p><strong>При получении (наложенный платеж)</strong> — оплата производится при
                                     получении заказа в почтовом отделении. Обратите внимание: при
                                     наложенном платеже возможна комиссия почтового оператора.</p>
-                            </div>
-
-                            <div class="co-payment-panel" data-payment-panel="erip" style="display:none;">
-                                <p><strong>АИС "Расчет" (ЕРИП)</strong> — выбрав данный способ, вы получите реквизиты
-                                    (номер для оплаты в ЕРИП). Оплатите через интернет‑банкинг или терминал, затем
-                                    отправьте подтверждение оплаты, если это требуется.</p>
                             </div>
 
                             <div class="co-payment-panel" data-payment-panel="card" style="display:none;">

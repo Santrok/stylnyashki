@@ -46,15 +46,15 @@
   gap: 12px;
   align-items: center;
   padding: 12px;
-  border: 1px solid var(--border);
+  /*border: 1px solid var(--border);*/
   border-radius: 10px;
   background: #fff;
 }
 
 .order-item-left { display: flex; gap: 12px; align-items: center; min-width: 0; }
 .order-item-thumb {
-  width: 150px;
-  height: 150px;
+  width: 120px;
+  height: 120px;
   border-radius: 8px;
   overflow: hidden;
   background: #F3F4F6;
@@ -67,7 +67,7 @@
 .order-item-attrs { color: var(--muted); font-weight: 700; margin-top: 6px; }
 
 /* Right column (price) */
-.order-item-right { text-align: right; min-width: 150px; }
+.order-item-right { text-align: right; }
 .order-item-price { font-weight: 900; }
 
 /* Totals */
@@ -82,7 +82,7 @@
 
 /* Responsive tweaks */
 @media (max-width: 640px) {
-  .order-item-row { flex-direction: column; align-items: center; justify-content: center; }
-    .order-item-left { display: flex; flex-direction: column; gap: 12px; align-items: center; min-width: 0; }
-  .order-item-right { width: 100%; margin-top: 8px; }
+  /*.order-item-row { flex-direction: column; align-items: center; justify-content: center; }*/
+  /*  .order-item-left { display: flex; flex-direction: column; gap: 12px; align-items: center; min-width: 0; }*/
+  /*.order-item-right { width: 100%; margin-top: 8px; }*/
 }

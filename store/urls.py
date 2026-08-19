@@ -12,7 +12,7 @@ from .views import ProductViewSet, CartViewSet, home, catalog, cart_page, checko
     favorite_add_to_cart_view, products_bulk_upload_view, AccountStaffOrdersListView, AccountStaffOrderDetailView, \
     account_order_status_update, cart_add, cart_remove, \
     payment_create, payment_success, payment_decline, payment_fail, payment_cancel, payment_retry, payment_status_check, \
-    webhook_bepaid
+    webhook_bepaid, payment_resume
 
 router = DefaultRouter()
 router.register('products', ProductViewSet, basename='product')
@@ -57,18 +57,19 @@ urlpatterns = [
     path('payments_info/', TemplateView.as_view(template_name='payments_info.html'), name='payments_info'),
     path('delivery_info/', TemplateView.as_view(template_name='delivery_info.html'), name='delivery_info'),
 
-#     раскомментировать при подключении оплаты картой
-#     path('payments/create/<int:payment_id>/', payment_create_view, name='payment_create'),
-#     path('payments/webhook/', webpay_webhook, name='payments_webhook'),
-#     path('payments/return/', payment_return, name='payments_return'),
+    #     раскомментировать при подключении оплаты картой
+    #     path('payments/create/<int:payment_id>/', payment_create_view, name='payment_create'),
+    #     path('payments/webhook/', webpay_webhook, name='payments_webhook'),
+    #     path('payments/return/', payment_return, name='payments_return'),
 
-path("payments/create/<int:payment_id>/", payment_create, name="payment_create"),
+    path("payments/create/<int:payment_id>/", payment_create, name="payment_create"),
     path("payments/success/", payment_success, name="payment_success"),
     path("payments/decline/", payment_decline, name="payment_decline"),
     path("payments/fail/", payment_fail, name="payment_fail"),
     path("payments/cancel/", payment_cancel, name="payment_cancel"),
     path("payments/retry/<uuid:order_id>/", payment_retry, name="payment_retry"),
     path("payments/status/<int:payment_id>/", payment_status_check, name="payment_status"),
+    path("resume/<uuid:order_id>/", payment_resume, name="payment_resume"),
     path("payments/notification/", webhook_bepaid, name="payment_notification"),
 
     path('password-reset/', auth_views.PasswordResetView.as_view(

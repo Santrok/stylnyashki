@@ -38,14 +38,14 @@ INSTALLED_APPS = [
 SITE_ID = 1
 
 SECURE_SSL_REDIRECT = False
-# SESSION_COOKIE_SECURE = True
-# CSRF_COOKIE_SECURE = True
-# SECURE_PROXY_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True
+SECURE_PROXY_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
-# CSRF_TRUSTED_ORIGINS = [
-#     'https://still-nashky.by/',
-#     'https://www.still-nashky.by/',
-# ]
+CSRF_TRUSTED_ORIGINS = [
+    'https://still-nashky.by/',
+    'https://www.still-nashky.by/',
+]
 
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_HEADERS = (
@@ -192,6 +192,7 @@ BEPAID = {
     "DECLINE_URL": env_keys.get("BEPAID_DECLINE_URL", ""),
     "FAIL_URL": env_keys.get("BEPAID_FAIL_URL", ""),
     "CANCEL_URL": env_keys.get("BEPAID_CANCEL_URL", ""),
+    "PAYMENT_TIMEOUT_MINUTES": int(env_keys.get("BEPAID_PAYMENT_TIMEOUT_MINUTES", 60)),
 }
 
 LOG_DIR = env_keys.get("LOG_DIR", os.path.join(BASE_DIR, "logs"))
@@ -289,5 +290,12 @@ CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = TIME_ZONE  # предполагается, что TIME_ZONE задан в settings
 CELERY_TASK_TRACK_STARTED = True
 CELERY_TASK_TIME_LIMIT = 60 * 5  # 5 минут на задачу (по желанию)
+
+CELERY_BEAT_SCHEDULE = {
+    'release_expired_reservations': {
+        'task': 'store.tasks.release_expired_reservations',
+        'schedule': 300.0,  # Каждые 5 минут
+    },
+}
 
 BULK_UPLOAD_TMP_DIR = "bulk_tmp"

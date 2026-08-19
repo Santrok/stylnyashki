@@ -494,6 +494,7 @@ class Payment(models.Model):
 
     order = models.ForeignKey(Order, related_name="payments", on_delete=models.CASCADE, verbose_name="Заказ")
     gateway = models.CharField("Платёжный шлюз", max_length=64, default="webpay")  # 'webpay' пока
+    token = models.CharField("Токен платежной операции", max_length=128, blank=True, default="", db_index=True)
     gateway_payment_id = models.CharField("ИД в шлюзе", max_length=128, blank=True, default="", db_index=True)
     amount = models.DecimalField("Сумма", max_digits=12, decimal_places=2, default=Decimal("0.00"))
     currency = models.CharField("Валюта", max_length=8, default="BYN")
@@ -502,6 +503,14 @@ class Payment(models.Model):
     created_at = models.DateTimeField("Создан", auto_now_add=True)
     updated_at = models.DateTimeField("Обновлён", auto_now=True)
     paid_at = models.DateTimeField("Дата оплаты", null=True, blank=True)
+
+    expires_at = models.DateTimeField(
+        "Платёж истекает в",
+        null=True,
+        blank=True,
+        db_index=True,
+        help_text="Время истечения платежа (по умолчанию +60 минут от создания)"
+    )
 
     class Meta:
         verbose_name = "Платёж"

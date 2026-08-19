@@ -2,6 +2,7 @@
 from __future__ import absolute_import, unicode_literals
 import logging
 import os
+from datetime import timedelta
 from urllib.parse import urljoin
 from uuid import uuid4
 from celery import shared_task
@@ -11,12 +12,16 @@ from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
 from django.conf import settings
 from django.core.mail import EmailMultiAlternatives
+from django.db import transaction
 from django.template.loader import render_to_string
 from django.urls import reverse
+from django.utils.timezone import now
 
 from .models import Product, Order
 from .utils import convert_uploaded_image_to_avif_content
 from tools.telegram_notification import send_telegram_notification
+
+from django.conf import settings
 
 logger = logging.getLogger("store.tasks")
 
@@ -195,3 +200,61 @@ def send_order_confirmation_email_task(self, order_id):
         except MaxRetriesExceededError:
             logger.error("send_order_confirmation_email_task: превышено число попыток для order=%s", order_id)
             return {"status": "failed", "order_id": order_id, "error": str(exc)}
+
+
+@shared_task
+def release_expired_reservations():
+    """
+    Освобождает товары, если платёж не пришёл за payment_timeout минут.
+
+    Запускается через Celery Beat каждые 5 минут.
+    """
+
+    bepaid_config = getattr(settings, "BEPAID", {})
+
+    payment_timeout = bepaid_config.get('PAYMENT_TIMEOUT_MINUTES')
+    cutoff_time = now() - timedelta(minutes=payment_timeout)
+
+    # Ищем заказы с PENDING статусом, созданные > payment_timeout минут назад
+    expired_orders = Order.objects.filter(
+        status=Order.Status.NEW,
+        payment_status=Order.PaymentStatus.PENDING,
+        payment_method=Order.PaymentMethod.CARD,
+        created_at__lt=cutoff_time
+    )
+
+    logger.info(f"Найдено {expired_orders.count()} просроченных оплат по заказам")
+
+    for order in expired_orders:
+        try:
+            with transaction.atomic():
+                # Ищем товары со статусом RESERVED
+                reserved_products = Product.objects.filter(
+                    status=Product.Status.RESERVED,
+                    order_items__order=order
+                ).distinct()
+
+                count = reserved_products.count()
+
+                if count > 0:
+                    # Освобождаем товары
+                    reserved_products.update(
+                        status=Product.Status.AVAILABLE,
+                        reserved_until=None
+                    )
+
+                    logger.info(
+                        f"Возвращено {count} товаров в продажу из заказа #{order.order_number}"
+                    )
+
+                # Отмечаем заказ как CANCELED
+                order.status = Order.Status.CANCELED
+                order.save(update_fields=["status", "updated_at"])
+
+                logger.info(f"Заказ #{order.order_number} отмечен как ОТМЕНЕН")
+
+        except Exception as e:
+            logger.exception(
+                f"Ошибка возврата продуктов в магазин для заказа #{order.order_number}: {e}"
+            )
+            continue

@@ -10,17 +10,19 @@
   gap: 12px;
 }
 
-.order-card .card__head {
+.card__head {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
+    flex-direction: column;
   justify-content: space-between;
   gap: 12px;
 }
 
+
 .order-meta {
   color: var(--muted);
   font-weight: 700;
-  font-size: 13px;
+  font-size: 15px;
   margin-top: 4px;
 }
 
@@ -36,14 +38,14 @@
   padding: 6px 10px;
   border-radius: 10px;
   font-weight: 900;
-  font-size: 12px;
+  font-size: 13px;
   color: #fff;
 }
 
 /* color helpers by status (можешь менять при необходимости) */
-.order-badge.NEW { background: #f3f4f6; color: #6b7280; }
-.order-badge.CONFIRMED { background: #ECFDF5; color: #065F46; }
-.order-badge.CANCELED { background: #FFF1F2; color: #991B1B; }
+.order-badge.new { background: #f3f4f6; color: #6b7280; }
+.order-badge.confirmed { background: #ECFDF5; color: #065F46; }
+.order-badge.canceled { background: #FFF1F2; color: #991B1B; }
 
 .order-total { font-weight: 900; color: var(--purple); }
 
@@ -61,41 +63,45 @@
   }
 }
 
+
 .order-preview {
   display: flex;
+    flex-direction: column;
   gap: 10px;
-  align-items: center;
+  align-items: flex-start;
   flex-wrap: wrap;
 }
 
 .order-item-mini {
   display: flex;
-  gap: 8px;
+  gap: 16px;
   align-items: center;
   background: var(--white);
-  border: 1px solid #f3f4f6;
+  /*border: 1px solid #f3f4f6;*/
   padding: 6px;
   border-radius: 8px;
 }
 
 .order-item-mini__img {
-  width: 48px;
-  height: 48px;
+  width: 96px;
+  height: 96px;
   border-radius: 8px;
   overflow: hidden;
   background: #F3F4F6;
   flex: 0 0 auto;
 }
+
+.btn-primary {padding: 5px 9px; background: var(--purple); border-radius: 12px; font-size: 14px; font-weight: 900; cursor: pointer;}
 .order-item-mini__img img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
-.order-item-mini__meta .name { font-weight: 900; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.order-item-mini__meta .name { font-weight: 900; font-size: 20px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .order-item-mini__meta .qty { color: var(--muted); font-weight: 700; font-size: 12px; }
 
 .order-more { color: var(--muted); font-weight: 900; }
 
-.order-info { min-width: 180px; display:flex; flex-direction:column; gap:8px; }
-.info-row { display:flex; justify-content:space-between; gap:12px; }
-.info-label { color: var(--muted); font-weight: 800; font-size: 12px; }
+.order-info { min-width: 100%; display:flex; flex-direction:column; gap:8px; }
+.info-row { display:flex; align-items: center; justify-content:space-between; gap:40px; }
+.info-label { color: var(--muted); font-weight: 800; font-size: 18px; }
 .info-value { font-weight: 900; color: var(--text); }
 
 .card__actions { display:flex; gap:12px; margin-top: 6px; }
@@ -107,4 +113,11 @@
 /* адаптив */
 @media (min-width: 1024px) {
   .order-card { padding: 16px; border-radius: 12px; }
+}
+
+@media (min-width: 768px) {
+  .card__head {
+    flex-direction: row;
+  }
+    .order-info { min-width: 180px;}
 }
