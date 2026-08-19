@@ -537,7 +537,6 @@ def payment_create(request, payment_id: int):
 
         token = result["token"]
         redirect_url = result["redirect_url"]
-        payment.expires_at = result["expired_at"]
 
         # Обновляем Payment с токеном
         payment.token = token
