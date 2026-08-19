@@ -89,12 +89,6 @@ def home(request):
     products = Product.objects.filter(is_active=True, status=Product.Status.AVAILABLE).order_by("?")[:8]
     logger.debug("Главная страница: подготовлено %d товаров для отображения", len(products))
 
-    expired_orders = Order.objects.filter(
-        payment_status=Order.PaymentStatus.PENDING,
-        payment_method=Order.PaymentMethod.CARD,
-        created_at__lt='2026-08-11 23:57:59.993409+00:00'
-    )
-    print(expired_orders)
     context = {
         "products": products,
     }
